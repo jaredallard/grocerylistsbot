@@ -173,7 +173,8 @@ func main() {
 			for _, list := range lists {
 				fmt.Fprintf(replyBuf, "ID: %d\\) %s\n", list.ID, list.Name)
 			}
-			fmt.Fprintf(replyBuf, "\nSwitch to this list via /switch ID")
+			fmt.Fprintf(replyBuf, "\nSwitch to this list via /switch ID\n")
+			fmt.Fprintf(replyBuf, "See items in a list with /items ID")
 
 			if err := msg.Reply(replyBuf.String()); err != nil {
 				log.Errorf("failed to send user a reply: %v", err)
