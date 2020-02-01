@@ -1,6 +1,6 @@
 # grocerylistsbot
 
-A Telegram Bot to track your groceries :) [t.me/grocerylistsbot](t.me/grocerylistsbot)
+A Telegram Bot to track your groceries :) [t.me/grocerylistsbot](https://t.me/grocerylistsbot)
 
 ## Installation
 
