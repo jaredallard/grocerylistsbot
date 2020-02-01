@@ -223,7 +223,7 @@ func main() {
 				if item.Status == groceryitem.StatusPurchased {
 					fmt.Fprintf(replyBuf, "~")
 				}
-				fmt.Fprintf(replyBuf, "%d\\) *%s*", item.ID, item.Name)
+				fmt.Fprintf(replyBuf, "ID %d\\) *%s*", item.ID, item.Name)
 				if item.Status == groceryitem.StatusPurchased {
 					fmt.Fprintf(replyBuf, "~")
 				}
@@ -409,7 +409,7 @@ func main() {
 			}
 		} else if cmd == "/remove" {
 			if len(args) != 1 {
-				if err := msg.Reply("Invalid input, expected /purchased ID"); err != nil {
+				if err := msg.Reply("Invalid input, expected /remove ID"); err != nil {
 					log.Errorf("failed to send user a reply: %v", err)
 				}
 				continue
