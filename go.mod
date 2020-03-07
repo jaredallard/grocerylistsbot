@@ -10,5 +10,5 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/technoweenie/multipartstreamer v1.0.1 // indirect
 	golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7
-	google.golang.org/appengine v1.4.0
+	google.golang.org/appengine v1.6.5
 )
