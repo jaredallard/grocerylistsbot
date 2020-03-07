@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/facebookincubator/ent/dialect/sql"
+	"github.com/jaredallard/grocerylistsbot/ent/user"
 	"github.com/jaredallard/grocerylistsbot/ent/useridmapping"
 )
 
@@ -28,14 +29,31 @@ type UserIDMapping struct {
 	PlatformID string `json:"platform_id,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the UserIDMappingQuery when eager-loading is set.
-	Edges                   UserIDMappingEdges `json:"edges"`
-	user_id_mapping_user_id *int
+	Edges                UserIDMappingEdges `json:"edges"`
+	user_id_mapping_user *int
 }
 
 // UserIDMappingEdges holds the relations/edges for other nodes in the graph.
 type UserIDMappingEdges struct {
 	// User holds the value of the user edge.
 	User *User
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// UserOrErr returns the User value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e UserIDMappingEdges) UserOrErr() (*User, error) {
+	if e.loadedTypes[0] {
+		if e.User == nil {
+			// The edge user was loaded in eager-loading,
+			// but was not found.
+			return nil, &NotFoundError{label: user.Label}
+		}
+		return e.User, nil
+	}
+	return nil, &NotLoadedError{edge: "user"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -53,7 +71,7 @@ func (*UserIDMapping) scanValues() []interface{} {
 // fkValues returns the types for scanning foreign-keys values from sql.Rows.
 func (*UserIDMapping) fkValues() []interface{} {
 	return []interface{}{
-		&sql.NullInt64{}, // user_id_mapping_user_id
+		&sql.NullInt64{}, // user_id_mapping_user
 	}
 }
 
@@ -98,10 +116,10 @@ func (uim *UserIDMapping) assignValues(values ...interface{}) error {
 	values = values[5:]
 	if len(values) == len(useridmapping.ForeignKeys) {
 		if value, ok := values[0].(*sql.NullInt64); !ok {
-			return fmt.Errorf("unexpected type %T for edge-field user_id_mapping_user_id", value)
+			return fmt.Errorf("unexpected type %T for edge-field user_id_mapping_user", value)
 		} else if value.Valid {
-			uim.user_id_mapping_user_id = new(int)
-			*uim.user_id_mapping_user_id = int(value.Int64)
+			uim.user_id_mapping_user = new(int)
+			*uim.user_id_mapping_user = int(value.Int64)
 		}
 	}
 	return nil

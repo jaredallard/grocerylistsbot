@@ -36,7 +36,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "grocerylist" package.
 	ActiveListInverseTable = "grocery_lists"
 	// ActiveListColumn is the table column denoting the active_list relation/edge.
-	ActiveListColumn = "user_active_list_id"
+	ActiveListColumn = "user_active_list"
 )
 
 // Columns holds all SQL columns for user fields.
@@ -50,7 +50,7 @@ var Columns = []string{
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the User type.
 var ForeignKeys = []string{
-	"user_active_list_id",
+	"user_active_list",
 }
 
 var (

@@ -9,6 +9,7 @@ import (
 
 	"github.com/facebookincubator/ent/dialect/sql"
 	"github.com/jaredallard/grocerylistsbot/ent/groceryitem"
+	"github.com/jaredallard/grocerylistsbot/ent/grocerylist"
 )
 
 // GroceryItem is the model entity for the GroceryItem schema.
@@ -30,14 +31,31 @@ type GroceryItem struct {
 	Price float64 `json:"price,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the GroceryItemQuery when eager-loading is set.
-	Edges                       GroceryItemEdges `json:"edges"`
-	grocery_item_grocerylist_id *int
+	Edges                    GroceryItemEdges `json:"edges"`
+	grocery_item_grocerylist *int
 }
 
 // GroceryItemEdges holds the relations/edges for other nodes in the graph.
 type GroceryItemEdges struct {
 	// Grocerylist holds the value of the grocerylist edge.
 	Grocerylist *GroceryList
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// GrocerylistOrErr returns the Grocerylist value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e GroceryItemEdges) GrocerylistOrErr() (*GroceryList, error) {
+	if e.loadedTypes[0] {
+		if e.Grocerylist == nil {
+			// The edge grocerylist was loaded in eager-loading,
+			// but was not found.
+			return nil, &NotFoundError{label: grocerylist.Label}
+		}
+		return e.Grocerylist, nil
+	}
+	return nil, &NotLoadedError{edge: "grocerylist"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -56,7 +74,7 @@ func (*GroceryItem) scanValues() []interface{} {
 // fkValues returns the types for scanning foreign-keys values from sql.Rows.
 func (*GroceryItem) fkValues() []interface{} {
 	return []interface{}{
-		&sql.NullInt64{}, // grocery_item_grocerylist_id
+		&sql.NullInt64{}, // grocery_item_grocerylist
 	}
 }
 
@@ -106,10 +124,10 @@ func (gi *GroceryItem) assignValues(values ...interface{}) error {
 	values = values[6:]
 	if len(values) == len(groceryitem.ForeignKeys) {
 		if value, ok := values[0].(*sql.NullInt64); !ok {
-			return fmt.Errorf("unexpected type %T for edge-field grocery_item_grocerylist_id", value)
+			return fmt.Errorf("unexpected type %T for edge-field grocery_item_grocerylist", value)
 		} else if value.Valid {
-			gi.grocery_item_grocerylist_id = new(int)
-			*gi.grocery_item_grocerylist_id = int(value.Int64)
+			gi.grocery_item_grocerylist = new(int)
+			*gi.grocery_item_grocerylist = int(value.Int64)
 		}
 	}
 	return nil

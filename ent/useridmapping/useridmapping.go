@@ -34,7 +34,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "user" package.
 	UserInverseTable = "users"
 	// UserColumn is the table column denoting the user relation/edge.
-	UserColumn = "user_id_mapping_user_id"
+	UserColumn = "user_id_mapping_user"
 )
 
 // Columns holds all SQL columns for useridmapping fields.
@@ -49,7 +49,7 @@ var Columns = []string{
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the UserIDMapping type.
 var ForeignKeys = []string{
-	"user_id_mapping_user_id",
+	"user_id_mapping_user",
 }
 
 var (

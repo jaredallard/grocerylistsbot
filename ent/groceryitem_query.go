@@ -290,9 +290,12 @@ func (giq *GroceryItemQuery) Select(field string, fields ...string) *GroceryItem
 
 func (giq *GroceryItemQuery) sqlAll(ctx context.Context) ([]*GroceryItem, error) {
 	var (
-		nodes   []*GroceryItem = []*GroceryItem{}
-		withFKs                = giq.withFKs
-		_spec                  = giq.querySpec()
+		nodes       = []*GroceryItem{}
+		withFKs     = giq.withFKs
+		_spec       = giq.querySpec()
+		loadedTypes = [1]bool{
+			giq.withGrocerylist != nil,
+		}
 	)
 	if giq.withGrocerylist != nil {
 		withFKs = true
@@ -314,6 +317,7 @@ func (giq *GroceryItemQuery) sqlAll(ctx context.Context) ([]*GroceryItem, error)
 			return fmt.Errorf("ent: Assign called without calling ScanValues")
 		}
 		node := nodes[len(nodes)-1]
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(values...)
 	}
 	if err := sqlgraph.QueryNodes(ctx, giq.driver, _spec); err != nil {
@@ -327,7 +331,7 @@ func (giq *GroceryItemQuery) sqlAll(ctx context.Context) ([]*GroceryItem, error)
 		ids := make([]int, 0, len(nodes))
 		nodeids := make(map[int][]*GroceryItem)
 		for i := range nodes {
-			if fk := nodes[i].grocery_item_grocerylist_id; fk != nil {
+			if fk := nodes[i].grocery_item_grocerylist; fk != nil {
 				ids = append(ids, *fk)
 				nodeids[*fk] = append(nodeids[*fk], nodes[i])
 			}
@@ -340,7 +344,7 @@ func (giq *GroceryItemQuery) sqlAll(ctx context.Context) ([]*GroceryItem, error)
 		for _, n := range neighbors {
 			nodes, ok := nodeids[n.ID]
 			if !ok {
-				return nil, fmt.Errorf(`unexpected foreign-key "grocery_item_grocerylist_id" returned %v`, n.ID)
+				return nil, fmt.Errorf(`unexpected foreign-key "grocery_item_grocerylist" returned %v`, n.ID)
 			}
 			for i := range nodes {
 				nodes[i].Edges.Grocerylist = n

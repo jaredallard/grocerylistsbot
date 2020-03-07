@@ -33,6 +33,18 @@ type GroceryList struct {
 type GroceryListEdges struct {
 	// Members holds the value of the members edge.
 	Members []*User
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// MembersOrErr returns the Members value or an error if the edge
+// was not loaded in eager-loading.
+func (e GroceryListEdges) MembersOrErr() ([]*User, error) {
+	if e.loadedTypes[0] {
+		return e.Members, nil
+	}
+	return nil, &NotLoadedError{edge: "members"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.

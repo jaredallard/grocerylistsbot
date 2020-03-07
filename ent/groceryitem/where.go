@@ -12,27 +12,23 @@ import (
 
 // ID filters vertices based on their identifier.
 func ID(id int) predicate.GroceryItem {
-	return predicate.GroceryItem(
-		func(s *sql.Selector) {
-			s.Where(sql.EQ(s.C(FieldID), id))
-		},
-	)
+	return predicate.GroceryItem(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldID), id))
+	})
 }
 
 // IDEQ applies the EQ predicate on the ID field.
 func IDEQ(id int) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldID), id))
-	},
-	)
+	})
 }
 
 // IDNEQ applies the NEQ predicate on the ID field.
 func IDNEQ(id int) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.NEQ(s.C(FieldID), id))
-	},
-	)
+	})
 }
 
 // IDIn applies the In predicate on the ID field.
@@ -49,8 +45,7 @@ func IDIn(ids ...int) predicate.GroceryItem {
 			v[i] = ids[i]
 		}
 		s.Where(sql.In(s.C(FieldID), v...))
-	},
-	)
+	})
 }
 
 // IDNotIn applies the NotIn predicate on the ID field.
@@ -67,96 +62,84 @@ func IDNotIn(ids ...int) predicate.GroceryItem {
 			v[i] = ids[i]
 		}
 		s.Where(sql.NotIn(s.C(FieldID), v...))
-	},
-	)
+	})
 }
 
 // IDGT applies the GT predicate on the ID field.
 func IDGT(id int) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.GT(s.C(FieldID), id))
-	},
-	)
+	})
 }
 
 // IDGTE applies the GTE predicate on the ID field.
 func IDGTE(id int) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.GTE(s.C(FieldID), id))
-	},
-	)
+	})
 }
 
 // IDLT applies the LT predicate on the ID field.
 func IDLT(id int) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.LT(s.C(FieldID), id))
-	},
-	)
+	})
 }
 
 // IDLTE applies the LTE predicate on the ID field.
 func IDLTE(id int) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.LTE(s.C(FieldID), id))
-	},
-	)
+	})
 }
 
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldCreatedAt), v))
-	},
-	)
+	})
 }
 
 // ModifiedAt applies equality check predicate on the "modified_at" field. It's identical to ModifiedAtEQ.
 func ModifiedAt(v time.Time) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldModifiedAt), v))
-	},
-	)
+	})
 }
 
 // DeletedAt applies equality check predicate on the "deleted_at" field. It's identical to DeletedAtEQ.
 func DeletedAt(v time.Time) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldDeletedAt), v))
-	},
-	)
+	})
 }
 
 // Name applies equality check predicate on the "name" field. It's identical to NameEQ.
 func Name(v string) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldName), v))
-	},
-	)
+	})
 }
 
 // Price applies equality check predicate on the "price" field. It's identical to PriceEQ.
 func Price(v float64) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldPrice), v))
-	},
-	)
+	})
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldCreatedAt), v))
-	},
-	)
+	})
 }
 
 // CreatedAtNEQ applies the NEQ predicate on the "created_at" field.
 func CreatedAtNEQ(v time.Time) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.NEQ(s.C(FieldCreatedAt), v))
-	},
-	)
+	})
 }
 
 // CreatedAtIn applies the In predicate on the "created_at" field.
@@ -173,8 +156,7 @@ func CreatedAtIn(vs ...time.Time) predicate.GroceryItem {
 			return
 		}
 		s.Where(sql.In(s.C(FieldCreatedAt), v...))
-	},
-	)
+	})
 }
 
 // CreatedAtNotIn applies the NotIn predicate on the "created_at" field.
@@ -191,56 +173,49 @@ func CreatedAtNotIn(vs ...time.Time) predicate.GroceryItem {
 			return
 		}
 		s.Where(sql.NotIn(s.C(FieldCreatedAt), v...))
-	},
-	)
+	})
 }
 
 // CreatedAtGT applies the GT predicate on the "created_at" field.
 func CreatedAtGT(v time.Time) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.GT(s.C(FieldCreatedAt), v))
-	},
-	)
+	})
 }
 
 // CreatedAtGTE applies the GTE predicate on the "created_at" field.
 func CreatedAtGTE(v time.Time) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.GTE(s.C(FieldCreatedAt), v))
-	},
-	)
+	})
 }
 
 // CreatedAtLT applies the LT predicate on the "created_at" field.
 func CreatedAtLT(v time.Time) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.LT(s.C(FieldCreatedAt), v))
-	},
-	)
+	})
 }
 
 // CreatedAtLTE applies the LTE predicate on the "created_at" field.
 func CreatedAtLTE(v time.Time) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.LTE(s.C(FieldCreatedAt), v))
-	},
-	)
+	})
 }
 
 // ModifiedAtEQ applies the EQ predicate on the "modified_at" field.
 func ModifiedAtEQ(v time.Time) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldModifiedAt), v))
-	},
-	)
+	})
 }
 
 // ModifiedAtNEQ applies the NEQ predicate on the "modified_at" field.
 func ModifiedAtNEQ(v time.Time) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.NEQ(s.C(FieldModifiedAt), v))
-	},
-	)
+	})
 }
 
 // ModifiedAtIn applies the In predicate on the "modified_at" field.
@@ -257,8 +232,7 @@ func ModifiedAtIn(vs ...time.Time) predicate.GroceryItem {
 			return
 		}
 		s.Where(sql.In(s.C(FieldModifiedAt), v...))
-	},
-	)
+	})
 }
 
 // ModifiedAtNotIn applies the NotIn predicate on the "modified_at" field.
@@ -275,56 +249,49 @@ func ModifiedAtNotIn(vs ...time.Time) predicate.GroceryItem {
 			return
 		}
 		s.Where(sql.NotIn(s.C(FieldModifiedAt), v...))
-	},
-	)
+	})
 }
 
 // ModifiedAtGT applies the GT predicate on the "modified_at" field.
 func ModifiedAtGT(v time.Time) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.GT(s.C(FieldModifiedAt), v))
-	},
-	)
+	})
 }
 
 // ModifiedAtGTE applies the GTE predicate on the "modified_at" field.
 func ModifiedAtGTE(v time.Time) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.GTE(s.C(FieldModifiedAt), v))
-	},
-	)
+	})
 }
 
 // ModifiedAtLT applies the LT predicate on the "modified_at" field.
 func ModifiedAtLT(v time.Time) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.LT(s.C(FieldModifiedAt), v))
-	},
-	)
+	})
 }
 
 // ModifiedAtLTE applies the LTE predicate on the "modified_at" field.
 func ModifiedAtLTE(v time.Time) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.LTE(s.C(FieldModifiedAt), v))
-	},
-	)
+	})
 }
 
 // DeletedAtEQ applies the EQ predicate on the "deleted_at" field.
 func DeletedAtEQ(v time.Time) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldDeletedAt), v))
-	},
-	)
+	})
 }
 
 // DeletedAtNEQ applies the NEQ predicate on the "deleted_at" field.
 func DeletedAtNEQ(v time.Time) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.NEQ(s.C(FieldDeletedAt), v))
-	},
-	)
+	})
 }
 
 // DeletedAtIn applies the In predicate on the "deleted_at" field.
@@ -341,8 +308,7 @@ func DeletedAtIn(vs ...time.Time) predicate.GroceryItem {
 			return
 		}
 		s.Where(sql.In(s.C(FieldDeletedAt), v...))
-	},
-	)
+	})
 }
 
 // DeletedAtNotIn applies the NotIn predicate on the "deleted_at" field.
@@ -359,72 +325,63 @@ func DeletedAtNotIn(vs ...time.Time) predicate.GroceryItem {
 			return
 		}
 		s.Where(sql.NotIn(s.C(FieldDeletedAt), v...))
-	},
-	)
+	})
 }
 
 // DeletedAtGT applies the GT predicate on the "deleted_at" field.
 func DeletedAtGT(v time.Time) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.GT(s.C(FieldDeletedAt), v))
-	},
-	)
+	})
 }
 
 // DeletedAtGTE applies the GTE predicate on the "deleted_at" field.
 func DeletedAtGTE(v time.Time) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.GTE(s.C(FieldDeletedAt), v))
-	},
-	)
+	})
 }
 
 // DeletedAtLT applies the LT predicate on the "deleted_at" field.
 func DeletedAtLT(v time.Time) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.LT(s.C(FieldDeletedAt), v))
-	},
-	)
+	})
 }
 
 // DeletedAtLTE applies the LTE predicate on the "deleted_at" field.
 func DeletedAtLTE(v time.Time) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.LTE(s.C(FieldDeletedAt), v))
-	},
-	)
+	})
 }
 
 // DeletedAtIsNil applies the IsNil predicate on the "deleted_at" field.
 func DeletedAtIsNil() predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.IsNull(s.C(FieldDeletedAt)))
-	},
-	)
+	})
 }
 
 // DeletedAtNotNil applies the NotNil predicate on the "deleted_at" field.
 func DeletedAtNotNil() predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.NotNull(s.C(FieldDeletedAt)))
-	},
-	)
+	})
 }
 
 // NameEQ applies the EQ predicate on the "name" field.
 func NameEQ(v string) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldName), v))
-	},
-	)
+	})
 }
 
 // NameNEQ applies the NEQ predicate on the "name" field.
 func NameNEQ(v string) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.NEQ(s.C(FieldName), v))
-	},
-	)
+	})
 }
 
 // NameIn applies the In predicate on the "name" field.
@@ -441,8 +398,7 @@ func NameIn(vs ...string) predicate.GroceryItem {
 			return
 		}
 		s.Where(sql.In(s.C(FieldName), v...))
-	},
-	)
+	})
 }
 
 // NameNotIn applies the NotIn predicate on the "name" field.
@@ -459,96 +415,84 @@ func NameNotIn(vs ...string) predicate.GroceryItem {
 			return
 		}
 		s.Where(sql.NotIn(s.C(FieldName), v...))
-	},
-	)
+	})
 }
 
 // NameGT applies the GT predicate on the "name" field.
 func NameGT(v string) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.GT(s.C(FieldName), v))
-	},
-	)
+	})
 }
 
 // NameGTE applies the GTE predicate on the "name" field.
 func NameGTE(v string) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.GTE(s.C(FieldName), v))
-	},
-	)
+	})
 }
 
 // NameLT applies the LT predicate on the "name" field.
 func NameLT(v string) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.LT(s.C(FieldName), v))
-	},
-	)
+	})
 }
 
 // NameLTE applies the LTE predicate on the "name" field.
 func NameLTE(v string) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.LTE(s.C(FieldName), v))
-	},
-	)
+	})
 }
 
 // NameContains applies the Contains predicate on the "name" field.
 func NameContains(v string) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.Contains(s.C(FieldName), v))
-	},
-	)
+	})
 }
 
 // NameHasPrefix applies the HasPrefix predicate on the "name" field.
 func NameHasPrefix(v string) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.HasPrefix(s.C(FieldName), v))
-	},
-	)
+	})
 }
 
 // NameHasSuffix applies the HasSuffix predicate on the "name" field.
 func NameHasSuffix(v string) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.HasSuffix(s.C(FieldName), v))
-	},
-	)
+	})
 }
 
 // NameEqualFold applies the EqualFold predicate on the "name" field.
 func NameEqualFold(v string) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.EqualFold(s.C(FieldName), v))
-	},
-	)
+	})
 }
 
 // NameContainsFold applies the ContainsFold predicate on the "name" field.
 func NameContainsFold(v string) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.ContainsFold(s.C(FieldName), v))
-	},
-	)
+	})
 }
 
 // StatusEQ applies the EQ predicate on the "status" field.
 func StatusEQ(v Status) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldStatus), v))
-	},
-	)
+	})
 }
 
 // StatusNEQ applies the NEQ predicate on the "status" field.
 func StatusNEQ(v Status) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.NEQ(s.C(FieldStatus), v))
-	},
-	)
+	})
 }
 
 // StatusIn applies the In predicate on the "status" field.
@@ -565,8 +509,7 @@ func StatusIn(vs ...Status) predicate.GroceryItem {
 			return
 		}
 		s.Where(sql.In(s.C(FieldStatus), v...))
-	},
-	)
+	})
 }
 
 // StatusNotIn applies the NotIn predicate on the "status" field.
@@ -583,24 +526,21 @@ func StatusNotIn(vs ...Status) predicate.GroceryItem {
 			return
 		}
 		s.Where(sql.NotIn(s.C(FieldStatus), v...))
-	},
-	)
+	})
 }
 
 // PriceEQ applies the EQ predicate on the "price" field.
 func PriceEQ(v float64) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldPrice), v))
-	},
-	)
+	})
 }
 
 // PriceNEQ applies the NEQ predicate on the "price" field.
 func PriceNEQ(v float64) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.NEQ(s.C(FieldPrice), v))
-	},
-	)
+	})
 }
 
 // PriceIn applies the In predicate on the "price" field.
@@ -617,8 +557,7 @@ func PriceIn(vs ...float64) predicate.GroceryItem {
 			return
 		}
 		s.Where(sql.In(s.C(FieldPrice), v...))
-	},
-	)
+	})
 }
 
 // PriceNotIn applies the NotIn predicate on the "price" field.
@@ -635,56 +574,49 @@ func PriceNotIn(vs ...float64) predicate.GroceryItem {
 			return
 		}
 		s.Where(sql.NotIn(s.C(FieldPrice), v...))
-	},
-	)
+	})
 }
 
 // PriceGT applies the GT predicate on the "price" field.
 func PriceGT(v float64) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.GT(s.C(FieldPrice), v))
-	},
-	)
+	})
 }
 
 // PriceGTE applies the GTE predicate on the "price" field.
 func PriceGTE(v float64) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.GTE(s.C(FieldPrice), v))
-	},
-	)
+	})
 }
 
 // PriceLT applies the LT predicate on the "price" field.
 func PriceLT(v float64) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.LT(s.C(FieldPrice), v))
-	},
-	)
+	})
 }
 
 // PriceLTE applies the LTE predicate on the "price" field.
 func PriceLTE(v float64) predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.LTE(s.C(FieldPrice), v))
-	},
-	)
+	})
 }
 
 // PriceIsNil applies the IsNil predicate on the "price" field.
 func PriceIsNil() predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.IsNull(s.C(FieldPrice)))
-	},
-	)
+	})
 }
 
 // PriceNotNil applies the NotNil predicate on the "price" field.
 func PriceNotNil() predicate.GroceryItem {
 	return predicate.GroceryItem(func(s *sql.Selector) {
 		s.Where(sql.NotNull(s.C(FieldPrice)))
-	},
-	)
+	})
 }
 
 // HasGrocerylist applies the HasEdge predicate on the "grocerylist" edge.
@@ -696,8 +628,7 @@ func HasGrocerylist() predicate.GroceryItem {
 			sqlgraph.Edge(sqlgraph.M2O, false, GrocerylistTable, GrocerylistColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
-	},
-	)
+	})
 }
 
 // HasGrocerylistWith applies the HasEdge predicate on the "grocerylist" edge with a given conditions (other predicates).
@@ -713,44 +644,37 @@ func HasGrocerylistWith(preds ...predicate.GroceryList) predicate.GroceryItem {
 				p(s)
 			}
 		})
-	},
-	)
+	})
 }
 
 // And groups list of predicates with the AND operator between them.
 func And(predicates ...predicate.GroceryItem) predicate.GroceryItem {
-	return predicate.GroceryItem(
-		func(s *sql.Selector) {
-			s1 := s.Clone().SetP(nil)
-			for _, p := range predicates {
-				p(s1)
-			}
-			s.Where(s1.P())
-		},
-	)
+	return predicate.GroceryItem(func(s *sql.Selector) {
+		s1 := s.Clone().SetP(nil)
+		for _, p := range predicates {
+			p(s1)
+		}
+		s.Where(s1.P())
+	})
 }
 
 // Or groups list of predicates with the OR operator between them.
 func Or(predicates ...predicate.GroceryItem) predicate.GroceryItem {
-	return predicate.GroceryItem(
-		func(s *sql.Selector) {
-			s1 := s.Clone().SetP(nil)
-			for i, p := range predicates {
-				if i > 0 {
-					s1.Or()
-				}
-				p(s1)
+	return predicate.GroceryItem(func(s *sql.Selector) {
+		s1 := s.Clone().SetP(nil)
+		for i, p := range predicates {
+			if i > 0 {
+				s1.Or()
 			}
-			s.Where(s1.P())
-		},
-	)
+			p(s1)
+		}
+		s.Where(s1.P())
+	})
 }
 
 // Not applies the not operator on the given predicate.
 func Not(p predicate.GroceryItem) predicate.GroceryItem {
-	return predicate.GroceryItem(
-		func(s *sql.Selector) {
-			p(s.Not())
-		},
-	)
+	return predicate.GroceryItem(func(s *sql.Selector) {
+		p(s.Not())
+	})
 }

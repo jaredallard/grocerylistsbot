@@ -36,7 +36,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "grocerylist" package.
 	GrocerylistInverseTable = "grocery_lists"
 	// GrocerylistColumn is the table column denoting the grocerylist relation/edge.
-	GrocerylistColumn = "grocery_item_grocerylist_id"
+	GrocerylistColumn = "grocery_item_grocerylist"
 )
 
 // Columns holds all SQL columns for groceryitem fields.
@@ -52,7 +52,7 @@ var Columns = []string{
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the GroceryItem type.
 var ForeignKeys = []string{
-	"grocery_item_grocerylist_id",
+	"grocery_item_grocerylist",
 }
 
 var (

@@ -290,8 +290,11 @@ func (glq *GroceryListQuery) Select(field string, fields ...string) *GroceryList
 
 func (glq *GroceryListQuery) sqlAll(ctx context.Context) ([]*GroceryList, error) {
 	var (
-		nodes []*GroceryList = []*GroceryList{}
-		_spec                = glq.querySpec()
+		nodes       = []*GroceryList{}
+		_spec       = glq.querySpec()
+		loadedTypes = [1]bool{
+			glq.withMembers != nil,
+		}
 	)
 	_spec.ScanValues = func() []interface{} {
 		node := &GroceryList{config: glq.config}
@@ -304,6 +307,7 @@ func (glq *GroceryListQuery) sqlAll(ctx context.Context) ([]*GroceryList, error)
 			return fmt.Errorf("ent: Assign called without calling ScanValues")
 		}
 		node := nodes[len(nodes)-1]
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(values...)
 	}
 	if err := sqlgraph.QueryNodes(ctx, glq.driver, _spec); err != nil {
@@ -347,7 +351,7 @@ func (glq *GroceryListQuery) sqlAll(ctx context.Context) ([]*GroceryList, error)
 					return fmt.Errorf("unexpected id value for edge-in")
 				}
 				outValue := int(eout.Int64)
-				inValue := int(eout.Int64)
+				inValue := int(ein.Int64)
 				node, ok := ids[outValue]
 				if !ok {
 					return fmt.Errorf("unexpected node id in edges: %v", outValue)

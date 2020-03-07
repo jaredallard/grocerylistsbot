@@ -20,7 +20,7 @@ var (
 		{Name: "name", Type: field.TypeString},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"purchased", "unpurchased"}, Default: groceryitem.DefaultStatus},
 		{Name: "price", Type: field.TypeFloat64, Nullable: true},
-		{Name: "grocery_item_grocerylist_id", Type: field.TypeInt, Nullable: true},
+		{Name: "grocery_item_grocerylist", Type: field.TypeInt, Nullable: true},
 	}
 	// GroceryItemsTable holds the schema information for the "grocery_items" table.
 	GroceryItemsTable = &schema.Table{
@@ -59,7 +59,7 @@ var (
 		{Name: "modified_at", Type: field.TypeTime},
 		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
 		{Name: "name", Type: field.TypeString},
-		{Name: "user_active_list_id", Type: field.TypeInt, Nullable: true},
+		{Name: "user_active_list", Type: field.TypeInt, Nullable: true},
 	}
 	// UsersTable holds the schema information for the "users" table.
 	UsersTable = &schema.Table{
@@ -91,7 +91,7 @@ var (
 		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
 		{Name: "platform_type", Type: field.TypeEnum, Enums: []string{"telegram", "sms"}},
 		{Name: "platform_id", Type: field.TypeString},
-		{Name: "user_id_mapping_user_id", Type: field.TypeInt, Nullable: true},
+		{Name: "user_id_mapping_user", Type: field.TypeInt, Nullable: true},
 	}
 	// UserIDMappingsTable holds the schema information for the "user_id_mappings" table.
 	UserIDMappingsTable = &schema.Table{

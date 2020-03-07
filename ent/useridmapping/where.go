@@ -12,27 +12,23 @@ import (
 
 // ID filters vertices based on their identifier.
 func ID(id int) predicate.UserIDMapping {
-	return predicate.UserIDMapping(
-		func(s *sql.Selector) {
-			s.Where(sql.EQ(s.C(FieldID), id))
-		},
-	)
+	return predicate.UserIDMapping(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldID), id))
+	})
 }
 
 // IDEQ applies the EQ predicate on the ID field.
 func IDEQ(id int) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldID), id))
-	},
-	)
+	})
 }
 
 // IDNEQ applies the NEQ predicate on the ID field.
 func IDNEQ(id int) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.NEQ(s.C(FieldID), id))
-	},
-	)
+	})
 }
 
 // IDIn applies the In predicate on the ID field.
@@ -49,8 +45,7 @@ func IDIn(ids ...int) predicate.UserIDMapping {
 			v[i] = ids[i]
 		}
 		s.Where(sql.In(s.C(FieldID), v...))
-	},
-	)
+	})
 }
 
 // IDNotIn applies the NotIn predicate on the ID field.
@@ -67,88 +62,77 @@ func IDNotIn(ids ...int) predicate.UserIDMapping {
 			v[i] = ids[i]
 		}
 		s.Where(sql.NotIn(s.C(FieldID), v...))
-	},
-	)
+	})
 }
 
 // IDGT applies the GT predicate on the ID field.
 func IDGT(id int) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.GT(s.C(FieldID), id))
-	},
-	)
+	})
 }
 
 // IDGTE applies the GTE predicate on the ID field.
 func IDGTE(id int) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.GTE(s.C(FieldID), id))
-	},
-	)
+	})
 }
 
 // IDLT applies the LT predicate on the ID field.
 func IDLT(id int) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.LT(s.C(FieldID), id))
-	},
-	)
+	})
 }
 
 // IDLTE applies the LTE predicate on the ID field.
 func IDLTE(id int) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.LTE(s.C(FieldID), id))
-	},
-	)
+	})
 }
 
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldCreatedAt), v))
-	},
-	)
+	})
 }
 
 // ModifiedAt applies equality check predicate on the "modified_at" field. It's identical to ModifiedAtEQ.
 func ModifiedAt(v time.Time) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldModifiedAt), v))
-	},
-	)
+	})
 }
 
 // DeletedAt applies equality check predicate on the "deleted_at" field. It's identical to DeletedAtEQ.
 func DeletedAt(v time.Time) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldDeletedAt), v))
-	},
-	)
+	})
 }
 
 // PlatformID applies equality check predicate on the "platform_id" field. It's identical to PlatformIDEQ.
 func PlatformID(v string) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldPlatformID), v))
-	},
-	)
+	})
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldCreatedAt), v))
-	},
-	)
+	})
 }
 
 // CreatedAtNEQ applies the NEQ predicate on the "created_at" field.
 func CreatedAtNEQ(v time.Time) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.NEQ(s.C(FieldCreatedAt), v))
-	},
-	)
+	})
 }
 
 // CreatedAtIn applies the In predicate on the "created_at" field.
@@ -165,8 +149,7 @@ func CreatedAtIn(vs ...time.Time) predicate.UserIDMapping {
 			return
 		}
 		s.Where(sql.In(s.C(FieldCreatedAt), v...))
-	},
-	)
+	})
 }
 
 // CreatedAtNotIn applies the NotIn predicate on the "created_at" field.
@@ -183,56 +166,49 @@ func CreatedAtNotIn(vs ...time.Time) predicate.UserIDMapping {
 			return
 		}
 		s.Where(sql.NotIn(s.C(FieldCreatedAt), v...))
-	},
-	)
+	})
 }
 
 // CreatedAtGT applies the GT predicate on the "created_at" field.
 func CreatedAtGT(v time.Time) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.GT(s.C(FieldCreatedAt), v))
-	},
-	)
+	})
 }
 
 // CreatedAtGTE applies the GTE predicate on the "created_at" field.
 func CreatedAtGTE(v time.Time) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.GTE(s.C(FieldCreatedAt), v))
-	},
-	)
+	})
 }
 
 // CreatedAtLT applies the LT predicate on the "created_at" field.
 func CreatedAtLT(v time.Time) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.LT(s.C(FieldCreatedAt), v))
-	},
-	)
+	})
 }
 
 // CreatedAtLTE applies the LTE predicate on the "created_at" field.
 func CreatedAtLTE(v time.Time) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.LTE(s.C(FieldCreatedAt), v))
-	},
-	)
+	})
 }
 
 // ModifiedAtEQ applies the EQ predicate on the "modified_at" field.
 func ModifiedAtEQ(v time.Time) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldModifiedAt), v))
-	},
-	)
+	})
 }
 
 // ModifiedAtNEQ applies the NEQ predicate on the "modified_at" field.
 func ModifiedAtNEQ(v time.Time) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.NEQ(s.C(FieldModifiedAt), v))
-	},
-	)
+	})
 }
 
 // ModifiedAtIn applies the In predicate on the "modified_at" field.
@@ -249,8 +225,7 @@ func ModifiedAtIn(vs ...time.Time) predicate.UserIDMapping {
 			return
 		}
 		s.Where(sql.In(s.C(FieldModifiedAt), v...))
-	},
-	)
+	})
 }
 
 // ModifiedAtNotIn applies the NotIn predicate on the "modified_at" field.
@@ -267,56 +242,49 @@ func ModifiedAtNotIn(vs ...time.Time) predicate.UserIDMapping {
 			return
 		}
 		s.Where(sql.NotIn(s.C(FieldModifiedAt), v...))
-	},
-	)
+	})
 }
 
 // ModifiedAtGT applies the GT predicate on the "modified_at" field.
 func ModifiedAtGT(v time.Time) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.GT(s.C(FieldModifiedAt), v))
-	},
-	)
+	})
 }
 
 // ModifiedAtGTE applies the GTE predicate on the "modified_at" field.
 func ModifiedAtGTE(v time.Time) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.GTE(s.C(FieldModifiedAt), v))
-	},
-	)
+	})
 }
 
 // ModifiedAtLT applies the LT predicate on the "modified_at" field.
 func ModifiedAtLT(v time.Time) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.LT(s.C(FieldModifiedAt), v))
-	},
-	)
+	})
 }
 
 // ModifiedAtLTE applies the LTE predicate on the "modified_at" field.
 func ModifiedAtLTE(v time.Time) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.LTE(s.C(FieldModifiedAt), v))
-	},
-	)
+	})
 }
 
 // DeletedAtEQ applies the EQ predicate on the "deleted_at" field.
 func DeletedAtEQ(v time.Time) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldDeletedAt), v))
-	},
-	)
+	})
 }
 
 // DeletedAtNEQ applies the NEQ predicate on the "deleted_at" field.
 func DeletedAtNEQ(v time.Time) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.NEQ(s.C(FieldDeletedAt), v))
-	},
-	)
+	})
 }
 
 // DeletedAtIn applies the In predicate on the "deleted_at" field.
@@ -333,8 +301,7 @@ func DeletedAtIn(vs ...time.Time) predicate.UserIDMapping {
 			return
 		}
 		s.Where(sql.In(s.C(FieldDeletedAt), v...))
-	},
-	)
+	})
 }
 
 // DeletedAtNotIn applies the NotIn predicate on the "deleted_at" field.
@@ -351,72 +318,63 @@ func DeletedAtNotIn(vs ...time.Time) predicate.UserIDMapping {
 			return
 		}
 		s.Where(sql.NotIn(s.C(FieldDeletedAt), v...))
-	},
-	)
+	})
 }
 
 // DeletedAtGT applies the GT predicate on the "deleted_at" field.
 func DeletedAtGT(v time.Time) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.GT(s.C(FieldDeletedAt), v))
-	},
-	)
+	})
 }
 
 // DeletedAtGTE applies the GTE predicate on the "deleted_at" field.
 func DeletedAtGTE(v time.Time) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.GTE(s.C(FieldDeletedAt), v))
-	},
-	)
+	})
 }
 
 // DeletedAtLT applies the LT predicate on the "deleted_at" field.
 func DeletedAtLT(v time.Time) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.LT(s.C(FieldDeletedAt), v))
-	},
-	)
+	})
 }
 
 // DeletedAtLTE applies the LTE predicate on the "deleted_at" field.
 func DeletedAtLTE(v time.Time) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.LTE(s.C(FieldDeletedAt), v))
-	},
-	)
+	})
 }
 
 // DeletedAtIsNil applies the IsNil predicate on the "deleted_at" field.
 func DeletedAtIsNil() predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.IsNull(s.C(FieldDeletedAt)))
-	},
-	)
+	})
 }
 
 // DeletedAtNotNil applies the NotNil predicate on the "deleted_at" field.
 func DeletedAtNotNil() predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.NotNull(s.C(FieldDeletedAt)))
-	},
-	)
+	})
 }
 
 // PlatformTypeEQ applies the EQ predicate on the "platform_type" field.
 func PlatformTypeEQ(v PlatformType) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldPlatformType), v))
-	},
-	)
+	})
 }
 
 // PlatformTypeNEQ applies the NEQ predicate on the "platform_type" field.
 func PlatformTypeNEQ(v PlatformType) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.NEQ(s.C(FieldPlatformType), v))
-	},
-	)
+	})
 }
 
 // PlatformTypeIn applies the In predicate on the "platform_type" field.
@@ -433,8 +391,7 @@ func PlatformTypeIn(vs ...PlatformType) predicate.UserIDMapping {
 			return
 		}
 		s.Where(sql.In(s.C(FieldPlatformType), v...))
-	},
-	)
+	})
 }
 
 // PlatformTypeNotIn applies the NotIn predicate on the "platform_type" field.
@@ -451,24 +408,21 @@ func PlatformTypeNotIn(vs ...PlatformType) predicate.UserIDMapping {
 			return
 		}
 		s.Where(sql.NotIn(s.C(FieldPlatformType), v...))
-	},
-	)
+	})
 }
 
 // PlatformIDEQ applies the EQ predicate on the "platform_id" field.
 func PlatformIDEQ(v string) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldPlatformID), v))
-	},
-	)
+	})
 }
 
 // PlatformIDNEQ applies the NEQ predicate on the "platform_id" field.
 func PlatformIDNEQ(v string) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.NEQ(s.C(FieldPlatformID), v))
-	},
-	)
+	})
 }
 
 // PlatformIDIn applies the In predicate on the "platform_id" field.
@@ -485,8 +439,7 @@ func PlatformIDIn(vs ...string) predicate.UserIDMapping {
 			return
 		}
 		s.Where(sql.In(s.C(FieldPlatformID), v...))
-	},
-	)
+	})
 }
 
 // PlatformIDNotIn applies the NotIn predicate on the "platform_id" field.
@@ -503,80 +456,70 @@ func PlatformIDNotIn(vs ...string) predicate.UserIDMapping {
 			return
 		}
 		s.Where(sql.NotIn(s.C(FieldPlatformID), v...))
-	},
-	)
+	})
 }
 
 // PlatformIDGT applies the GT predicate on the "platform_id" field.
 func PlatformIDGT(v string) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.GT(s.C(FieldPlatformID), v))
-	},
-	)
+	})
 }
 
 // PlatformIDGTE applies the GTE predicate on the "platform_id" field.
 func PlatformIDGTE(v string) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.GTE(s.C(FieldPlatformID), v))
-	},
-	)
+	})
 }
 
 // PlatformIDLT applies the LT predicate on the "platform_id" field.
 func PlatformIDLT(v string) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.LT(s.C(FieldPlatformID), v))
-	},
-	)
+	})
 }
 
 // PlatformIDLTE applies the LTE predicate on the "platform_id" field.
 func PlatformIDLTE(v string) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.LTE(s.C(FieldPlatformID), v))
-	},
-	)
+	})
 }
 
 // PlatformIDContains applies the Contains predicate on the "platform_id" field.
 func PlatformIDContains(v string) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.Contains(s.C(FieldPlatformID), v))
-	},
-	)
+	})
 }
 
 // PlatformIDHasPrefix applies the HasPrefix predicate on the "platform_id" field.
 func PlatformIDHasPrefix(v string) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.HasPrefix(s.C(FieldPlatformID), v))
-	},
-	)
+	})
 }
 
 // PlatformIDHasSuffix applies the HasSuffix predicate on the "platform_id" field.
 func PlatformIDHasSuffix(v string) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.HasSuffix(s.C(FieldPlatformID), v))
-	},
-	)
+	})
 }
 
 // PlatformIDEqualFold applies the EqualFold predicate on the "platform_id" field.
 func PlatformIDEqualFold(v string) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.EqualFold(s.C(FieldPlatformID), v))
-	},
-	)
+	})
 }
 
 // PlatformIDContainsFold applies the ContainsFold predicate on the "platform_id" field.
 func PlatformIDContainsFold(v string) predicate.UserIDMapping {
 	return predicate.UserIDMapping(func(s *sql.Selector) {
 		s.Where(sql.ContainsFold(s.C(FieldPlatformID), v))
-	},
-	)
+	})
 }
 
 // HasUser applies the HasEdge predicate on the "user" edge.
@@ -588,8 +531,7 @@ func HasUser() predicate.UserIDMapping {
 			sqlgraph.Edge(sqlgraph.M2O, false, UserTable, UserColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
-	},
-	)
+	})
 }
 
 // HasUserWith applies the HasEdge predicate on the "user" edge with a given conditions (other predicates).
@@ -605,44 +547,37 @@ func HasUserWith(preds ...predicate.User) predicate.UserIDMapping {
 				p(s)
 			}
 		})
-	},
-	)
+	})
 }
 
 // And groups list of predicates with the AND operator between them.
 func And(predicates ...predicate.UserIDMapping) predicate.UserIDMapping {
-	return predicate.UserIDMapping(
-		func(s *sql.Selector) {
-			s1 := s.Clone().SetP(nil)
-			for _, p := range predicates {
-				p(s1)
-			}
-			s.Where(s1.P())
-		},
-	)
+	return predicate.UserIDMapping(func(s *sql.Selector) {
+		s1 := s.Clone().SetP(nil)
+		for _, p := range predicates {
+			p(s1)
+		}
+		s.Where(s1.P())
+	})
 }
 
 // Or groups list of predicates with the OR operator between them.
 func Or(predicates ...predicate.UserIDMapping) predicate.UserIDMapping {
-	return predicate.UserIDMapping(
-		func(s *sql.Selector) {
-			s1 := s.Clone().SetP(nil)
-			for i, p := range predicates {
-				if i > 0 {
-					s1.Or()
-				}
-				p(s1)
+	return predicate.UserIDMapping(func(s *sql.Selector) {
+		s1 := s.Clone().SetP(nil)
+		for i, p := range predicates {
+			if i > 0 {
+				s1.Or()
 			}
-			s.Where(s1.P())
-		},
-	)
+			p(s1)
+		}
+		s.Where(s1.P())
+	})
 }
 
 // Not applies the not operator on the given predicate.
 func Not(p predicate.UserIDMapping) predicate.UserIDMapping {
-	return predicate.UserIDMapping(
-		func(s *sql.Selector) {
-			p(s.Not())
-		},
-	)
+	return predicate.UserIDMapping(func(s *sql.Selector) {
+		p(s.Not())
+	})
 }

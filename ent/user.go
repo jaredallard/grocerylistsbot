@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/facebookincubator/ent/dialect/sql"
+	"github.com/jaredallard/grocerylistsbot/ent/grocerylist"
 	"github.com/jaredallard/grocerylistsbot/ent/user"
 )
 
@@ -26,8 +27,8 @@ type User struct {
 	Name string `json:"name,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the UserQuery when eager-loading is set.
-	Edges               UserEdges `json:"edges"`
-	user_active_list_id *int
+	Edges            UserEdges `json:"edges"`
+	user_active_list *int
 }
 
 // UserEdges holds the relations/edges for other nodes in the graph.
@@ -36,6 +37,32 @@ type UserEdges struct {
 	Grocerylist []*GroceryList
 	// ActiveList holds the value of the active_list edge.
 	ActiveList *GroceryList
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [2]bool
+}
+
+// GrocerylistOrErr returns the Grocerylist value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) GrocerylistOrErr() ([]*GroceryList, error) {
+	if e.loadedTypes[0] {
+		return e.Grocerylist, nil
+	}
+	return nil, &NotLoadedError{edge: "grocerylist"}
+}
+
+// ActiveListOrErr returns the ActiveList value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e UserEdges) ActiveListOrErr() (*GroceryList, error) {
+	if e.loadedTypes[1] {
+		if e.ActiveList == nil {
+			// The edge active_list was loaded in eager-loading,
+			// but was not found.
+			return nil, &NotFoundError{label: grocerylist.Label}
+		}
+		return e.ActiveList, nil
+	}
+	return nil, &NotLoadedError{edge: "active_list"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -52,7 +79,7 @@ func (*User) scanValues() []interface{} {
 // fkValues returns the types for scanning foreign-keys values from sql.Rows.
 func (*User) fkValues() []interface{} {
 	return []interface{}{
-		&sql.NullInt64{}, // user_active_list_id
+		&sql.NullInt64{}, // user_active_list
 	}
 }
 
@@ -92,10 +119,10 @@ func (u *User) assignValues(values ...interface{}) error {
 	values = values[4:]
 	if len(values) == len(user.ForeignKeys) {
 		if value, ok := values[0].(*sql.NullInt64); !ok {
-			return fmt.Errorf("unexpected type %T for edge-field user_active_list_id", value)
+			return fmt.Errorf("unexpected type %T for edge-field user_active_list", value)
 		} else if value.Valid {
-			u.user_active_list_id = new(int)
-			*u.user_active_list_id = int(value.Int64)
+			u.user_active_list = new(int)
+			*u.user_active_list = int(value.Int64)
 		}
 	}
 	return nil

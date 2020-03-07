@@ -290,9 +290,12 @@ func (uimq *UserIDMappingQuery) Select(field string, fields ...string) *UserIDMa
 
 func (uimq *UserIDMappingQuery) sqlAll(ctx context.Context) ([]*UserIDMapping, error) {
 	var (
-		nodes   []*UserIDMapping = []*UserIDMapping{}
-		withFKs                  = uimq.withFKs
-		_spec                    = uimq.querySpec()
+		nodes       = []*UserIDMapping{}
+		withFKs     = uimq.withFKs
+		_spec       = uimq.querySpec()
+		loadedTypes = [1]bool{
+			uimq.withUser != nil,
+		}
 	)
 	if uimq.withUser != nil {
 		withFKs = true
@@ -314,6 +317,7 @@ func (uimq *UserIDMappingQuery) sqlAll(ctx context.Context) ([]*UserIDMapping, e
 			return fmt.Errorf("ent: Assign called without calling ScanValues")
 		}
 		node := nodes[len(nodes)-1]
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(values...)
 	}
 	if err := sqlgraph.QueryNodes(ctx, uimq.driver, _spec); err != nil {
@@ -327,7 +331,7 @@ func (uimq *UserIDMappingQuery) sqlAll(ctx context.Context) ([]*UserIDMapping, e
 		ids := make([]int, 0, len(nodes))
 		nodeids := make(map[int][]*UserIDMapping)
 		for i := range nodes {
-			if fk := nodes[i].user_id_mapping_user_id; fk != nil {
+			if fk := nodes[i].user_id_mapping_user; fk != nil {
 				ids = append(ids, *fk)
 				nodeids[*fk] = append(nodeids[*fk], nodes[i])
 			}
@@ -340,7 +344,7 @@ func (uimq *UserIDMappingQuery) sqlAll(ctx context.Context) ([]*UserIDMapping, e
 		for _, n := range neighbors {
 			nodes, ok := nodeids[n.ID]
 			if !ok {
-				return nil, fmt.Errorf(`unexpected foreign-key "user_id_mapping_user_id" returned %v`, n.ID)
+				return nil, fmt.Errorf(`unexpected foreign-key "user_id_mapping_user" returned %v`, n.ID)
 			}
 			for i := range nodes {
 				nodes[i].Edges.User = n
