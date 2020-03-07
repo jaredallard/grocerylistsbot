@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.0.0-experimental
-FROM golang:1.13-alpine as builder
+FROM golang:1.14-alpine as builder
 
 # Default to using go modules and go proxy
 ENV GO111MODULE on
