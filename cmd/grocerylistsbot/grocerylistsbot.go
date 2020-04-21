@@ -55,7 +55,7 @@ func main() {
 
 	client, err := ent.Open("postgres", "sslmode=disable user=postgres dbname=ent")
 	if err != nil {
-		log.Fatalf("failed opening connection to postgres: ", err)
+		log.Fatalf("failed opening connection to postgres: %v", err)
 	}
 	defer client.Close()
 
@@ -78,7 +78,7 @@ func main() {
 		log.Fatalf("failed to create telegram message steam: %v", err)
 	}
 
-	log.Infof("started message processor(s)")
+	log.Info("started message processor(s)")
 	for msg := range stream {
 		log.Infof("got message: %s", msg.String())
 
@@ -363,7 +363,7 @@ func main() {
 			err = c.UpdateUser(ctx, msg.From)
 			if err != nil {
 				log.Errorf("failed to update active grocery list %v: %v", args[0], err)
-				if err := msg.Reply("I'm sorry, an error occured! Please try again later\\."); err != nil {
+				if err := msg.Reply("I'm sorry, an error occurred! Please try again later\\."); err != nil {
 					log.Errorf("failed to send user a reply: %v", err)
 				}
 				continue
@@ -399,7 +399,7 @@ func main() {
 			err = c.UpdateGroceryItem(ctx, l, &ent.GroceryItem{ID: id, Status: groceryitem.StatusPurchased})
 			if err != nil {
 				log.Errorf("failed to mark item as purchased %d: %v", id, err)
-				if err := msg.Reply("I'm sorry, an error occured! Please try again later\\."); err != nil {
+				if err := msg.Reply("I'm sorry, an error occurred! Please try again later\\."); err != nil {
 					log.Errorf("failed to send user a reply: %v", err)
 				}
 				continue
@@ -435,7 +435,7 @@ func main() {
 			err = c.DeleteGroceryItem(ctx, l, &ent.GroceryItem{ID: id})
 			if err != nil {
 				log.Errorf("failed to mark item as purchased %d: %v", id, err)
-				if err := msg.Reply("I'm sorry, an error occured! Please try again later\\."); err != nil {
+				if err := msg.Reply("I'm sorry, an error occurred! Please try again later\\."); err != nil {
 					log.Errorf("failed to send user a reply: %v", err)
 				}
 				continue
