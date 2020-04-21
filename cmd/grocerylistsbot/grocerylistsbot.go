@@ -83,7 +83,7 @@ func main() {
 		log.Infof("got message: %s", msg.String())
 
 		// handle errors
-		if ent.IsNotFound(msg.Error) {
+		if ent.IsNotFound(msg.Error) || msg.From == nil {
 			err := c.CreateUser(ctx, ent.UserIDMapping{
 				PlatformID:   msg.UserID,
 				PlatformType: msg.PlatformName,
@@ -257,7 +257,7 @@ func main() {
 
 			members, err := l.QueryMembers().All(ctx)
 			if err != nil {
-				log.Error("failed to query members from edge: %v", err)
+				log.Errorf("failed to query members from edge: %v", err)
 				if err := msg.Reply("An error occurred"); err != nil {
 					log.Errorf("failed to send user a reply: %v", err)
 				}
@@ -488,7 +488,6 @@ func main() {
 			}
 		}
 	}
-	// TODO(jaredallard): switch between grocery lists with a /switch command?
 
 	cancel()
 }
