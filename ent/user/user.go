@@ -4,24 +4,22 @@ package user
 
 import (
 	"time"
-
-	"github.com/facebookincubator/ent"
-	"github.com/jaredallard/grocerylistsbot/ent/schema"
 )
 
 const (
 	// Label holds the string label denoting the user type in the database.
 	Label = "user"
 	// FieldID holds the string denoting the id field in the database.
-	FieldID = "id"
-	// FieldCreatedAt holds the string denoting the created_at vertex property in the database.
-	FieldCreatedAt = "created_at"
-	// FieldModifiedAt holds the string denoting the modified_at vertex property in the database.
-	FieldModifiedAt = "modified_at"
-	// FieldDeletedAt holds the string denoting the deleted_at vertex property in the database.
-	FieldDeletedAt = "deleted_at"
-	// FieldName holds the string denoting the name vertex property in the database.
-	FieldName = "name"
+	FieldID         = "id"          // FieldCreatedAt holds the string denoting the created_at vertex property in the database.
+	FieldCreatedAt  = "created_at"  // FieldModifiedAt holds the string denoting the modified_at vertex property in the database.
+	FieldModifiedAt = "modified_at" // FieldDeletedAt holds the string denoting the deleted_at vertex property in the database.
+	FieldDeletedAt  = "deleted_at"  // FieldName holds the string denoting the name vertex property in the database.
+	FieldName       = "name"
+
+	// EdgeGrocerylist holds the string denoting the grocerylist edge name in mutations.
+	EdgeGrocerylist = "grocerylist"
+	// EdgeActiveList holds the string denoting the active_list edge name in mutations.
+	EdgeActiveList = "active_list"
 
 	// Table holds the table name of the user in the database.
 	Table = "users"
@@ -60,19 +58,8 @@ var (
 )
 
 var (
-	mixin       = schema.User{}.Mixin()
-	mixinFields = [...][]ent.Field{
-		mixin[0].Fields(),
-	}
-	fields = schema.User{}.Fields()
-
-	// descCreatedAt is the schema descriptor for created_at field.
-	descCreatedAt = mixinFields[0][0].Descriptor()
 	// DefaultCreatedAt holds the default value on creation for the created_at field.
-	DefaultCreatedAt = descCreatedAt.Default.(func() time.Time)
-
-	// descModifiedAt is the schema descriptor for modified_at field.
-	descModifiedAt = mixinFields[0][1].Descriptor()
+	DefaultCreatedAt func() time.Time
 	// DefaultModifiedAt holds the default value on creation for the modified_at field.
-	DefaultModifiedAt = descModifiedAt.Default.(func() time.Time)
+	DefaultModifiedAt func() time.Time
 )

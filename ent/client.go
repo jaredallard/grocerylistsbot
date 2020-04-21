@@ -36,16 +36,19 @@ type Client struct {
 
 // NewClient creates a new client configured with the given options.
 func NewClient(opts ...Option) *Client {
-	c := config{log: log.Println}
-	c.options(opts...)
-	return &Client{
-		config:        c,
-		Schema:        migrate.NewSchema(c.driver),
-		GroceryItem:   NewGroceryItemClient(c),
-		GroceryList:   NewGroceryListClient(c),
-		User:          NewUserClient(c),
-		UserIDMapping: NewUserIDMappingClient(c),
-	}
+	cfg := config{log: log.Println, hooks: &hooks{}}
+	cfg.options(opts...)
+	client := &Client{config: cfg}
+	client.init()
+	return client
+}
+
+func (c *Client) init() {
+	c.Schema = migrate.NewSchema(c.driver)
+	c.GroceryItem = NewGroceryItemClient(c.config)
+	c.GroceryList = NewGroceryListClient(c.config)
+	c.User = NewUserClient(c.config)
+	c.UserIDMapping = NewUserIDMappingClient(c.config)
 }
 
 // Open opens a connection to the database specified by the driver name and a
@@ -73,7 +76,26 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	if err != nil {
 		return nil, fmt.Errorf("ent: starting a transaction: %v", err)
 	}
-	cfg := config{driver: tx, log: c.log, debug: c.debug}
+	cfg := config{driver: tx, log: c.log, debug: c.debug, hooks: c.hooks}
+	return &Tx{
+		config:        cfg,
+		GroceryItem:   NewGroceryItemClient(cfg),
+		GroceryList:   NewGroceryListClient(cfg),
+		User:          NewUserClient(cfg),
+		UserIDMapping: NewUserIDMappingClient(cfg),
+	}, nil
+}
+
+// BeginTx returns a transactional client with options.
+func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) {
+	if _, ok := c.driver.(*txDriver); ok {
+		return nil, fmt.Errorf("ent: cannot start a transaction within a transaction")
+	}
+	tx, err := c.driver.(*sql.Driver).BeginTx(ctx, opts)
+	if err != nil {
+		return nil, fmt.Errorf("ent: starting a transaction: %v", err)
+	}
+	cfg := config{driver: &txDriver{tx: tx, drv: c.driver}, log: c.log, debug: c.debug, hooks: c.hooks}
 	return &Tx{
 		config:        cfg,
 		GroceryItem:   NewGroceryItemClient(cfg),
@@ -94,20 +116,24 @@ func (c *Client) Debug() *Client {
 	if c.debug {
 		return c
 	}
-	cfg := config{driver: dialect.Debug(c.driver, c.log), log: c.log, debug: true}
-	return &Client{
-		config:        cfg,
-		Schema:        migrate.NewSchema(cfg.driver),
-		GroceryItem:   NewGroceryItemClient(cfg),
-		GroceryList:   NewGroceryListClient(cfg),
-		User:          NewUserClient(cfg),
-		UserIDMapping: NewUserIDMappingClient(cfg),
-	}
+	cfg := config{driver: dialect.Debug(c.driver, c.log), log: c.log, debug: true, hooks: c.hooks}
+	client := &Client{config: cfg}
+	client.init()
+	return client
 }
 
 // Close closes the database connection and prevents new queries from starting.
 func (c *Client) Close() error {
 	return c.driver.Close()
+}
+
+// Use adds the mutation hooks to all the entity clients.
+// In order to add hooks to a specific client, call: `client.Node.Use(...)`.
+func (c *Client) Use(hooks ...Hook) {
+	c.GroceryItem.Use(hooks...)
+	c.GroceryList.Use(hooks...)
+	c.User.Use(hooks...)
+	c.UserIDMapping.Use(hooks...)
 }
 
 // GroceryItemClient is a client for the GroceryItem schema.
@@ -120,14 +146,22 @@ func NewGroceryItemClient(c config) *GroceryItemClient {
 	return &GroceryItemClient{config: c}
 }
 
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `groceryitem.Hooks(f(g(h())))`.
+func (c *GroceryItemClient) Use(hooks ...Hook) {
+	c.hooks.GroceryItem = append(c.hooks.GroceryItem, hooks...)
+}
+
 // Create returns a create builder for GroceryItem.
 func (c *GroceryItemClient) Create() *GroceryItemCreate {
-	return &GroceryItemCreate{config: c.config}
+	mutation := newGroceryItemMutation(c.config, OpCreate)
+	return &GroceryItemCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // Update returns an update builder for GroceryItem.
 func (c *GroceryItemClient) Update() *GroceryItemUpdate {
-	return &GroceryItemUpdate{config: c.config}
+	mutation := newGroceryItemMutation(c.config, OpUpdate)
+	return &GroceryItemUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // UpdateOne returns an update builder for the given entity.
@@ -137,12 +171,15 @@ func (c *GroceryItemClient) UpdateOne(gi *GroceryItem) *GroceryItemUpdateOne {
 
 // UpdateOneID returns an update builder for the given id.
 func (c *GroceryItemClient) UpdateOneID(id int) *GroceryItemUpdateOne {
-	return &GroceryItemUpdateOne{config: c.config, id: id}
+	mutation := newGroceryItemMutation(c.config, OpUpdateOne)
+	mutation.id = &id
+	return &GroceryItemUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // Delete returns a delete builder for GroceryItem.
 func (c *GroceryItemClient) Delete() *GroceryItemDelete {
-	return &GroceryItemDelete{config: c.config}
+	mutation := newGroceryItemMutation(c.config, OpDelete)
+	return &GroceryItemDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // DeleteOne returns a delete builder for the given entity.
@@ -152,7 +189,10 @@ func (c *GroceryItemClient) DeleteOne(gi *GroceryItem) *GroceryItemDeleteOne {
 
 // DeleteOneID returns a delete builder for the given id.
 func (c *GroceryItemClient) DeleteOneID(id int) *GroceryItemDeleteOne {
-	return &GroceryItemDeleteOne{c.Delete().Where(groceryitem.ID(id))}
+	builder := c.Delete().Where(groceryitem.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &GroceryItemDeleteOne{builder}
 }
 
 // Create returns a query builder for GroceryItem.
@@ -177,15 +217,22 @@ func (c *GroceryItemClient) GetX(ctx context.Context, id int) *GroceryItem {
 // QueryGrocerylist queries the grocerylist edge of a GroceryItem.
 func (c *GroceryItemClient) QueryGrocerylist(gi *GroceryItem) *GroceryListQuery {
 	query := &GroceryListQuery{config: c.config}
-	id := gi.ID
-	step := sqlgraph.NewStep(
-		sqlgraph.From(groceryitem.Table, groceryitem.FieldID, id),
-		sqlgraph.To(grocerylist.Table, grocerylist.FieldID),
-		sqlgraph.Edge(sqlgraph.M2O, false, groceryitem.GrocerylistTable, groceryitem.GrocerylistColumn),
-	)
-	query.sql = sqlgraph.Neighbors(gi.driver.Dialect(), step)
-
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := gi.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(groceryitem.Table, groceryitem.FieldID, id),
+			sqlgraph.To(grocerylist.Table, grocerylist.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, groceryitem.GrocerylistTable, groceryitem.GrocerylistColumn),
+		)
+		fromV = sqlgraph.Neighbors(gi.driver.Dialect(), step)
+		return fromV, nil
+	}
 	return query
+}
+
+// Hooks returns the client hooks.
+func (c *GroceryItemClient) Hooks() []Hook {
+	return c.hooks.GroceryItem
 }
 
 // GroceryListClient is a client for the GroceryList schema.
@@ -198,14 +245,22 @@ func NewGroceryListClient(c config) *GroceryListClient {
 	return &GroceryListClient{config: c}
 }
 
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `grocerylist.Hooks(f(g(h())))`.
+func (c *GroceryListClient) Use(hooks ...Hook) {
+	c.hooks.GroceryList = append(c.hooks.GroceryList, hooks...)
+}
+
 // Create returns a create builder for GroceryList.
 func (c *GroceryListClient) Create() *GroceryListCreate {
-	return &GroceryListCreate{config: c.config}
+	mutation := newGroceryListMutation(c.config, OpCreate)
+	return &GroceryListCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // Update returns an update builder for GroceryList.
 func (c *GroceryListClient) Update() *GroceryListUpdate {
-	return &GroceryListUpdate{config: c.config}
+	mutation := newGroceryListMutation(c.config, OpUpdate)
+	return &GroceryListUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // UpdateOne returns an update builder for the given entity.
@@ -215,12 +270,15 @@ func (c *GroceryListClient) UpdateOne(gl *GroceryList) *GroceryListUpdateOne {
 
 // UpdateOneID returns an update builder for the given id.
 func (c *GroceryListClient) UpdateOneID(id int) *GroceryListUpdateOne {
-	return &GroceryListUpdateOne{config: c.config, id: id}
+	mutation := newGroceryListMutation(c.config, OpUpdateOne)
+	mutation.id = &id
+	return &GroceryListUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // Delete returns a delete builder for GroceryList.
 func (c *GroceryListClient) Delete() *GroceryListDelete {
-	return &GroceryListDelete{config: c.config}
+	mutation := newGroceryListMutation(c.config, OpDelete)
+	return &GroceryListDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // DeleteOne returns a delete builder for the given entity.
@@ -230,7 +288,10 @@ func (c *GroceryListClient) DeleteOne(gl *GroceryList) *GroceryListDeleteOne {
 
 // DeleteOneID returns a delete builder for the given id.
 func (c *GroceryListClient) DeleteOneID(id int) *GroceryListDeleteOne {
-	return &GroceryListDeleteOne{c.Delete().Where(grocerylist.ID(id))}
+	builder := c.Delete().Where(grocerylist.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &GroceryListDeleteOne{builder}
 }
 
 // Create returns a query builder for GroceryList.
@@ -255,15 +316,22 @@ func (c *GroceryListClient) GetX(ctx context.Context, id int) *GroceryList {
 // QueryMembers queries the members edge of a GroceryList.
 func (c *GroceryListClient) QueryMembers(gl *GroceryList) *UserQuery {
 	query := &UserQuery{config: c.config}
-	id := gl.ID
-	step := sqlgraph.NewStep(
-		sqlgraph.From(grocerylist.Table, grocerylist.FieldID, id),
-		sqlgraph.To(user.Table, user.FieldID),
-		sqlgraph.Edge(sqlgraph.M2M, true, grocerylist.MembersTable, grocerylist.MembersPrimaryKey...),
-	)
-	query.sql = sqlgraph.Neighbors(gl.driver.Dialect(), step)
-
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := gl.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(grocerylist.Table, grocerylist.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, grocerylist.MembersTable, grocerylist.MembersPrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(gl.driver.Dialect(), step)
+		return fromV, nil
+	}
 	return query
+}
+
+// Hooks returns the client hooks.
+func (c *GroceryListClient) Hooks() []Hook {
+	return c.hooks.GroceryList
 }
 
 // UserClient is a client for the User schema.
@@ -276,14 +344,22 @@ func NewUserClient(c config) *UserClient {
 	return &UserClient{config: c}
 }
 
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `user.Hooks(f(g(h())))`.
+func (c *UserClient) Use(hooks ...Hook) {
+	c.hooks.User = append(c.hooks.User, hooks...)
+}
+
 // Create returns a create builder for User.
 func (c *UserClient) Create() *UserCreate {
-	return &UserCreate{config: c.config}
+	mutation := newUserMutation(c.config, OpCreate)
+	return &UserCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // Update returns an update builder for User.
 func (c *UserClient) Update() *UserUpdate {
-	return &UserUpdate{config: c.config}
+	mutation := newUserMutation(c.config, OpUpdate)
+	return &UserUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // UpdateOne returns an update builder for the given entity.
@@ -293,12 +369,15 @@ func (c *UserClient) UpdateOne(u *User) *UserUpdateOne {
 
 // UpdateOneID returns an update builder for the given id.
 func (c *UserClient) UpdateOneID(id int) *UserUpdateOne {
-	return &UserUpdateOne{config: c.config, id: id}
+	mutation := newUserMutation(c.config, OpUpdateOne)
+	mutation.id = &id
+	return &UserUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // Delete returns a delete builder for User.
 func (c *UserClient) Delete() *UserDelete {
-	return &UserDelete{config: c.config}
+	mutation := newUserMutation(c.config, OpDelete)
+	return &UserDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // DeleteOne returns a delete builder for the given entity.
@@ -308,7 +387,10 @@ func (c *UserClient) DeleteOne(u *User) *UserDeleteOne {
 
 // DeleteOneID returns a delete builder for the given id.
 func (c *UserClient) DeleteOneID(id int) *UserDeleteOne {
-	return &UserDeleteOne{c.Delete().Where(user.ID(id))}
+	builder := c.Delete().Where(user.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &UserDeleteOne{builder}
 }
 
 // Create returns a query builder for User.
@@ -333,29 +415,38 @@ func (c *UserClient) GetX(ctx context.Context, id int) *User {
 // QueryGrocerylist queries the grocerylist edge of a User.
 func (c *UserClient) QueryGrocerylist(u *User) *GroceryListQuery {
 	query := &GroceryListQuery{config: c.config}
-	id := u.ID
-	step := sqlgraph.NewStep(
-		sqlgraph.From(user.Table, user.FieldID, id),
-		sqlgraph.To(grocerylist.Table, grocerylist.FieldID),
-		sqlgraph.Edge(sqlgraph.M2M, false, user.GrocerylistTable, user.GrocerylistPrimaryKey...),
-	)
-	query.sql = sqlgraph.Neighbors(u.driver.Dialect(), step)
-
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := u.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(grocerylist.Table, grocerylist.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, user.GrocerylistTable, user.GrocerylistPrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
+		return fromV, nil
+	}
 	return query
 }
 
 // QueryActiveList queries the active_list edge of a User.
 func (c *UserClient) QueryActiveList(u *User) *GroceryListQuery {
 	query := &GroceryListQuery{config: c.config}
-	id := u.ID
-	step := sqlgraph.NewStep(
-		sqlgraph.From(user.Table, user.FieldID, id),
-		sqlgraph.To(grocerylist.Table, grocerylist.FieldID),
-		sqlgraph.Edge(sqlgraph.M2O, false, user.ActiveListTable, user.ActiveListColumn),
-	)
-	query.sql = sqlgraph.Neighbors(u.driver.Dialect(), step)
-
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := u.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(grocerylist.Table, grocerylist.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, user.ActiveListTable, user.ActiveListColumn),
+		)
+		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
+		return fromV, nil
+	}
 	return query
+}
+
+// Hooks returns the client hooks.
+func (c *UserClient) Hooks() []Hook {
+	return c.hooks.User
 }
 
 // UserIDMappingClient is a client for the UserIDMapping schema.
@@ -368,14 +459,22 @@ func NewUserIDMappingClient(c config) *UserIDMappingClient {
 	return &UserIDMappingClient{config: c}
 }
 
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `useridmapping.Hooks(f(g(h())))`.
+func (c *UserIDMappingClient) Use(hooks ...Hook) {
+	c.hooks.UserIDMapping = append(c.hooks.UserIDMapping, hooks...)
+}
+
 // Create returns a create builder for UserIDMapping.
 func (c *UserIDMappingClient) Create() *UserIDMappingCreate {
-	return &UserIDMappingCreate{config: c.config}
+	mutation := newUserIDMappingMutation(c.config, OpCreate)
+	return &UserIDMappingCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // Update returns an update builder for UserIDMapping.
 func (c *UserIDMappingClient) Update() *UserIDMappingUpdate {
-	return &UserIDMappingUpdate{config: c.config}
+	mutation := newUserIDMappingMutation(c.config, OpUpdate)
+	return &UserIDMappingUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // UpdateOne returns an update builder for the given entity.
@@ -385,12 +484,15 @@ func (c *UserIDMappingClient) UpdateOne(uim *UserIDMapping) *UserIDMappingUpdate
 
 // UpdateOneID returns an update builder for the given id.
 func (c *UserIDMappingClient) UpdateOneID(id int) *UserIDMappingUpdateOne {
-	return &UserIDMappingUpdateOne{config: c.config, id: id}
+	mutation := newUserIDMappingMutation(c.config, OpUpdateOne)
+	mutation.id = &id
+	return &UserIDMappingUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // Delete returns a delete builder for UserIDMapping.
 func (c *UserIDMappingClient) Delete() *UserIDMappingDelete {
-	return &UserIDMappingDelete{config: c.config}
+	mutation := newUserIDMappingMutation(c.config, OpDelete)
+	return &UserIDMappingDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // DeleteOne returns a delete builder for the given entity.
@@ -400,7 +502,10 @@ func (c *UserIDMappingClient) DeleteOne(uim *UserIDMapping) *UserIDMappingDelete
 
 // DeleteOneID returns a delete builder for the given id.
 func (c *UserIDMappingClient) DeleteOneID(id int) *UserIDMappingDeleteOne {
-	return &UserIDMappingDeleteOne{c.Delete().Where(useridmapping.ID(id))}
+	builder := c.Delete().Where(useridmapping.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &UserIDMappingDeleteOne{builder}
 }
 
 // Create returns a query builder for UserIDMapping.
@@ -425,13 +530,20 @@ func (c *UserIDMappingClient) GetX(ctx context.Context, id int) *UserIDMapping {
 // QueryUser queries the user edge of a UserIDMapping.
 func (c *UserIDMappingClient) QueryUser(uim *UserIDMapping) *UserQuery {
 	query := &UserQuery{config: c.config}
-	id := uim.ID
-	step := sqlgraph.NewStep(
-		sqlgraph.From(useridmapping.Table, useridmapping.FieldID, id),
-		sqlgraph.To(user.Table, user.FieldID),
-		sqlgraph.Edge(sqlgraph.M2O, false, useridmapping.UserTable, useridmapping.UserColumn),
-	)
-	query.sql = sqlgraph.Neighbors(uim.driver.Dialect(), step)
-
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := uim.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(useridmapping.Table, useridmapping.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, useridmapping.UserTable, useridmapping.UserColumn),
+		)
+		fromV = sqlgraph.Neighbors(uim.driver.Dialect(), step)
+		return fromV, nil
+	}
 	return query
+}
+
+// Hooks returns the client hooks.
+func (c *UserIDMappingClient) Hooks() []Hook {
+	return c.hooks.UserIDMapping
 }

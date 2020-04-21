@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/facebookincubator/ent/dialect/sql/sqlgraph"
@@ -15,16 +16,13 @@ import (
 // GroceryListCreate is the builder for creating a GroceryList entity.
 type GroceryListCreate struct {
 	config
-	created_at  *time.Time
-	modified_at *time.Time
-	deleted_at  *time.Time
-	name        *string
-	members     map[int]struct{}
+	mutation *GroceryListMutation
+	hooks    []Hook
 }
 
 // SetCreatedAt sets the created_at field.
 func (glc *GroceryListCreate) SetCreatedAt(t time.Time) *GroceryListCreate {
-	glc.created_at = &t
+	glc.mutation.SetCreatedAt(t)
 	return glc
 }
 
@@ -38,7 +36,7 @@ func (glc *GroceryListCreate) SetNillableCreatedAt(t *time.Time) *GroceryListCre
 
 // SetModifiedAt sets the modified_at field.
 func (glc *GroceryListCreate) SetModifiedAt(t time.Time) *GroceryListCreate {
-	glc.modified_at = &t
+	glc.mutation.SetModifiedAt(t)
 	return glc
 }
 
@@ -52,7 +50,7 @@ func (glc *GroceryListCreate) SetNillableModifiedAt(t *time.Time) *GroceryListCr
 
 // SetDeletedAt sets the deleted_at field.
 func (glc *GroceryListCreate) SetDeletedAt(t time.Time) *GroceryListCreate {
-	glc.deleted_at = &t
+	glc.mutation.SetDeletedAt(t)
 	return glc
 }
 
@@ -66,7 +64,7 @@ func (glc *GroceryListCreate) SetNillableDeletedAt(t *time.Time) *GroceryListCre
 
 // SetName sets the name field.
 func (glc *GroceryListCreate) SetName(s string) *GroceryListCreate {
-	glc.name = &s
+	glc.mutation.SetName(s)
 	return glc
 }
 
@@ -80,12 +78,7 @@ func (glc *GroceryListCreate) SetNillableName(s *string) *GroceryListCreate {
 
 // AddMemberIDs adds the members edge to User by ids.
 func (glc *GroceryListCreate) AddMemberIDs(ids ...int) *GroceryListCreate {
-	if glc.members == nil {
-		glc.members = make(map[int]struct{})
-	}
-	for i := range ids {
-		glc.members[ids[i]] = struct{}{}
-	}
+	glc.mutation.AddMemberIDs(ids...)
 	return glc
 }
 
@@ -100,19 +93,42 @@ func (glc *GroceryListCreate) AddMembers(u ...*User) *GroceryListCreate {
 
 // Save creates the GroceryList in the database.
 func (glc *GroceryListCreate) Save(ctx context.Context) (*GroceryList, error) {
-	if glc.created_at == nil {
+	if _, ok := glc.mutation.CreatedAt(); !ok {
 		v := grocerylist.DefaultCreatedAt()
-		glc.created_at = &v
+		glc.mutation.SetCreatedAt(v)
 	}
-	if glc.modified_at == nil {
+	if _, ok := glc.mutation.ModifiedAt(); !ok {
 		v := grocerylist.DefaultModifiedAt()
-		glc.modified_at = &v
+		glc.mutation.SetModifiedAt(v)
 	}
-	if glc.name == nil {
+	if _, ok := glc.mutation.Name(); !ok {
 		v := grocerylist.DefaultName
-		glc.name = &v
+		glc.mutation.SetName(v)
 	}
-	return glc.sqlSave(ctx)
+	var (
+		err  error
+		node *GroceryList
+	)
+	if len(glc.hooks) == 0 {
+		node, err = glc.sqlSave(ctx)
+	} else {
+		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
+			mutation, ok := m.(*GroceryListMutation)
+			if !ok {
+				return nil, fmt.Errorf("unexpected mutation type %T", m)
+			}
+			glc.mutation = mutation
+			node, err = glc.sqlSave(ctx)
+			return node, err
+		})
+		for i := len(glc.hooks) - 1; i >= 0; i-- {
+			mut = glc.hooks[i](mut)
+		}
+		if _, err := mut.Mutate(ctx, glc.mutation); err != nil {
+			return nil, err
+		}
+	}
+	return node, err
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -135,39 +151,39 @@ func (glc *GroceryListCreate) sqlSave(ctx context.Context) (*GroceryList, error)
 			},
 		}
 	)
-	if value := glc.created_at; value != nil {
+	if value, ok := glc.mutation.CreatedAt(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
-			Value:  *value,
+			Value:  value,
 			Column: grocerylist.FieldCreatedAt,
 		})
-		gl.CreatedAt = *value
+		gl.CreatedAt = value
 	}
-	if value := glc.modified_at; value != nil {
+	if value, ok := glc.mutation.ModifiedAt(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
-			Value:  *value,
+			Value:  value,
 			Column: grocerylist.FieldModifiedAt,
 		})
-		gl.ModifiedAt = *value
+		gl.ModifiedAt = value
 	}
-	if value := glc.deleted_at; value != nil {
+	if value, ok := glc.mutation.DeletedAt(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
-			Value:  *value,
+			Value:  value,
 			Column: grocerylist.FieldDeletedAt,
 		})
-		gl.DeletedAt = value
+		gl.DeletedAt = &value
 	}
-	if value := glc.name; value != nil {
+	if value, ok := glc.mutation.Name(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
 			Type:   field.TypeString,
-			Value:  *value,
+			Value:  value,
 			Column: grocerylist.FieldName,
 		})
-		gl.Name = *value
+		gl.Name = value
 	}
-	if nodes := glc.members; len(nodes) > 0 {
+	if nodes := glc.mutation.MembersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: true,
@@ -181,7 +197,7 @@ func (glc *GroceryListCreate) sqlSave(ctx context.Context) (*GroceryList, error)
 				},
 			},
 		}
-		for k, _ := range nodes {
+		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_spec.Edges = append(_spec.Edges, edge)

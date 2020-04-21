@@ -3,9 +3,6 @@
 package migrate
 
 import (
-	"github.com/jaredallard/grocerylistsbot/ent/groceryitem"
-	"github.com/jaredallard/grocerylistsbot/ent/grocerylist"
-
 	"github.com/facebookincubator/ent/dialect/sql/schema"
 	"github.com/facebookincubator/ent/schema/field"
 )
@@ -18,7 +15,7 @@ var (
 		{Name: "modified_at", Type: field.TypeTime},
 		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
 		{Name: "name", Type: field.TypeString},
-		{Name: "status", Type: field.TypeEnum, Enums: []string{"purchased", "unpurchased"}, Default: groceryitem.DefaultStatus},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"purchased", "unpurchased"}, Default: "unpurchased"},
 		{Name: "price", Type: field.TypeFloat64, Nullable: true},
 		{Name: "grocery_item_grocerylist", Type: field.TypeInt, Nullable: true},
 	}
@@ -43,7 +40,7 @@ var (
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "modified_at", Type: field.TypeTime},
 		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
-		{Name: "name", Type: field.TypeString, Default: grocerylist.DefaultName},
+		{Name: "name", Type: field.TypeString, Default: "Unset"},
 	}
 	// GroceryListsTable holds the schema information for the "grocery_lists" table.
 	GroceryListsTable = &schema.Table{

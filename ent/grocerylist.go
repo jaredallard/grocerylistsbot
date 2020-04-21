@@ -96,14 +96,14 @@ func (gl *GroceryList) assignValues(values ...interface{}) error {
 
 // QueryMembers queries the members edge of the GroceryList.
 func (gl *GroceryList) QueryMembers() *UserQuery {
-	return (&GroceryListClient{gl.config}).QueryMembers(gl)
+	return (&GroceryListClient{config: gl.config}).QueryMembers(gl)
 }
 
 // Update returns a builder for updating this GroceryList.
 // Note that, you need to call GroceryList.Unwrap() before calling this method, if this GroceryList
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (gl *GroceryList) Update() *GroceryListUpdateOne {
-	return (&GroceryListClient{gl.config}).UpdateOne(gl)
+	return (&GroceryListClient{config: gl.config}).UpdateOne(gl)
 }
 
 // Unwrap unwraps the entity that was returned from a transaction after it was closed,

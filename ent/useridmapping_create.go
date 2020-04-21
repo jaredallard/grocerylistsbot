@@ -17,17 +17,13 @@ import (
 // UserIDMappingCreate is the builder for creating a UserIDMapping entity.
 type UserIDMappingCreate struct {
 	config
-	created_at    *time.Time
-	modified_at   *time.Time
-	deleted_at    *time.Time
-	platform_type *useridmapping.PlatformType
-	platform_id   *string
-	user          map[int]struct{}
+	mutation *UserIDMappingMutation
+	hooks    []Hook
 }
 
 // SetCreatedAt sets the created_at field.
 func (uimc *UserIDMappingCreate) SetCreatedAt(t time.Time) *UserIDMappingCreate {
-	uimc.created_at = &t
+	uimc.mutation.SetCreatedAt(t)
 	return uimc
 }
 
@@ -41,7 +37,7 @@ func (uimc *UserIDMappingCreate) SetNillableCreatedAt(t *time.Time) *UserIDMappi
 
 // SetModifiedAt sets the modified_at field.
 func (uimc *UserIDMappingCreate) SetModifiedAt(t time.Time) *UserIDMappingCreate {
-	uimc.modified_at = &t
+	uimc.mutation.SetModifiedAt(t)
 	return uimc
 }
 
@@ -55,7 +51,7 @@ func (uimc *UserIDMappingCreate) SetNillableModifiedAt(t *time.Time) *UserIDMapp
 
 // SetDeletedAt sets the deleted_at field.
 func (uimc *UserIDMappingCreate) SetDeletedAt(t time.Time) *UserIDMappingCreate {
-	uimc.deleted_at = &t
+	uimc.mutation.SetDeletedAt(t)
 	return uimc
 }
 
@@ -69,22 +65,19 @@ func (uimc *UserIDMappingCreate) SetNillableDeletedAt(t *time.Time) *UserIDMappi
 
 // SetPlatformType sets the platform_type field.
 func (uimc *UserIDMappingCreate) SetPlatformType(ut useridmapping.PlatformType) *UserIDMappingCreate {
-	uimc.platform_type = &ut
+	uimc.mutation.SetPlatformType(ut)
 	return uimc
 }
 
 // SetPlatformID sets the platform_id field.
 func (uimc *UserIDMappingCreate) SetPlatformID(s string) *UserIDMappingCreate {
-	uimc.platform_id = &s
+	uimc.mutation.SetPlatformID(s)
 	return uimc
 }
 
 // SetUserID sets the user edge to User by id.
 func (uimc *UserIDMappingCreate) SetUserID(id int) *UserIDMappingCreate {
-	if uimc.user == nil {
-		uimc.user = make(map[int]struct{})
-	}
-	uimc.user[id] = struct{}{}
+	uimc.mutation.SetUserID(id)
 	return uimc
 }
 
@@ -103,27 +96,49 @@ func (uimc *UserIDMappingCreate) SetUser(u *User) *UserIDMappingCreate {
 
 // Save creates the UserIDMapping in the database.
 func (uimc *UserIDMappingCreate) Save(ctx context.Context) (*UserIDMapping, error) {
-	if uimc.created_at == nil {
+	if _, ok := uimc.mutation.CreatedAt(); !ok {
 		v := useridmapping.DefaultCreatedAt()
-		uimc.created_at = &v
+		uimc.mutation.SetCreatedAt(v)
 	}
-	if uimc.modified_at == nil {
+	if _, ok := uimc.mutation.ModifiedAt(); !ok {
 		v := useridmapping.DefaultModifiedAt()
-		uimc.modified_at = &v
+		uimc.mutation.SetModifiedAt(v)
 	}
-	if uimc.platform_type == nil {
+	if _, ok := uimc.mutation.PlatformType(); !ok {
 		return nil, errors.New("ent: missing required field \"platform_type\"")
 	}
-	if err := useridmapping.PlatformTypeValidator(*uimc.platform_type); err != nil {
-		return nil, fmt.Errorf("ent: validator failed for field \"platform_type\": %v", err)
+	if v, ok := uimc.mutation.PlatformType(); ok {
+		if err := useridmapping.PlatformTypeValidator(v); err != nil {
+			return nil, fmt.Errorf("ent: validator failed for field \"platform_type\": %v", err)
+		}
 	}
-	if uimc.platform_id == nil {
+	if _, ok := uimc.mutation.PlatformID(); !ok {
 		return nil, errors.New("ent: missing required field \"platform_id\"")
 	}
-	if len(uimc.user) > 1 {
-		return nil, errors.New("ent: multiple assignments on a unique edge \"user\"")
+	var (
+		err  error
+		node *UserIDMapping
+	)
+	if len(uimc.hooks) == 0 {
+		node, err = uimc.sqlSave(ctx)
+	} else {
+		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
+			mutation, ok := m.(*UserIDMappingMutation)
+			if !ok {
+				return nil, fmt.Errorf("unexpected mutation type %T", m)
+			}
+			uimc.mutation = mutation
+			node, err = uimc.sqlSave(ctx)
+			return node, err
+		})
+		for i := len(uimc.hooks) - 1; i >= 0; i-- {
+			mut = uimc.hooks[i](mut)
+		}
+		if _, err := mut.Mutate(ctx, uimc.mutation); err != nil {
+			return nil, err
+		}
 	}
-	return uimc.sqlSave(ctx)
+	return node, err
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -146,47 +161,47 @@ func (uimc *UserIDMappingCreate) sqlSave(ctx context.Context) (*UserIDMapping, e
 			},
 		}
 	)
-	if value := uimc.created_at; value != nil {
+	if value, ok := uimc.mutation.CreatedAt(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
-			Value:  *value,
+			Value:  value,
 			Column: useridmapping.FieldCreatedAt,
 		})
-		uim.CreatedAt = *value
+		uim.CreatedAt = value
 	}
-	if value := uimc.modified_at; value != nil {
+	if value, ok := uimc.mutation.ModifiedAt(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
-			Value:  *value,
+			Value:  value,
 			Column: useridmapping.FieldModifiedAt,
 		})
-		uim.ModifiedAt = *value
+		uim.ModifiedAt = value
 	}
-	if value := uimc.deleted_at; value != nil {
+	if value, ok := uimc.mutation.DeletedAt(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
-			Value:  *value,
+			Value:  value,
 			Column: useridmapping.FieldDeletedAt,
 		})
-		uim.DeletedAt = value
+		uim.DeletedAt = &value
 	}
-	if value := uimc.platform_type; value != nil {
+	if value, ok := uimc.mutation.PlatformType(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
 			Type:   field.TypeEnum,
-			Value:  *value,
+			Value:  value,
 			Column: useridmapping.FieldPlatformType,
 		})
-		uim.PlatformType = *value
+		uim.PlatformType = value
 	}
-	if value := uimc.platform_id; value != nil {
+	if value, ok := uimc.mutation.PlatformID(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
 			Type:   field.TypeString,
-			Value:  *value,
+			Value:  value,
 			Column: useridmapping.FieldPlatformID,
 		})
-		uim.PlatformID = *value
+		uim.PlatformID = value
 	}
-	if nodes := uimc.user; len(nodes) > 0 {
+	if nodes := uimc.mutation.UserIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
@@ -200,7 +215,7 @@ func (uimc *UserIDMappingCreate) sqlSave(ctx context.Context) (*UserIDMapping, e
 				},
 			},
 		}
-		for k, _ := range nodes {
+		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_spec.Edges = append(_spec.Edges, edge)

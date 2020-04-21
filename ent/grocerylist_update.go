@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/facebookincubator/ent/dialect/sql"
@@ -17,14 +18,9 @@ import (
 // GroceryListUpdate is the builder for updating GroceryList entities.
 type GroceryListUpdate struct {
 	config
-	created_at      *time.Time
-	modified_at     *time.Time
-	deleted_at      *time.Time
-	cleardeleted_at bool
-	name            *string
-	members         map[int]struct{}
-	removedMembers  map[int]struct{}
-	predicates      []predicate.GroceryList
+	hooks      []Hook
+	mutation   *GroceryListMutation
+	predicates []predicate.GroceryList
 }
 
 // Where adds a new predicate for the builder.
@@ -35,7 +31,7 @@ func (glu *GroceryListUpdate) Where(ps ...predicate.GroceryList) *GroceryListUpd
 
 // SetCreatedAt sets the created_at field.
 func (glu *GroceryListUpdate) SetCreatedAt(t time.Time) *GroceryListUpdate {
-	glu.created_at = &t
+	glu.mutation.SetCreatedAt(t)
 	return glu
 }
 
@@ -49,7 +45,7 @@ func (glu *GroceryListUpdate) SetNillableCreatedAt(t *time.Time) *GroceryListUpd
 
 // SetModifiedAt sets the modified_at field.
 func (glu *GroceryListUpdate) SetModifiedAt(t time.Time) *GroceryListUpdate {
-	glu.modified_at = &t
+	glu.mutation.SetModifiedAt(t)
 	return glu
 }
 
@@ -63,7 +59,7 @@ func (glu *GroceryListUpdate) SetNillableModifiedAt(t *time.Time) *GroceryListUp
 
 // SetDeletedAt sets the deleted_at field.
 func (glu *GroceryListUpdate) SetDeletedAt(t time.Time) *GroceryListUpdate {
-	glu.deleted_at = &t
+	glu.mutation.SetDeletedAt(t)
 	return glu
 }
 
@@ -77,14 +73,13 @@ func (glu *GroceryListUpdate) SetNillableDeletedAt(t *time.Time) *GroceryListUpd
 
 // ClearDeletedAt clears the value of deleted_at.
 func (glu *GroceryListUpdate) ClearDeletedAt() *GroceryListUpdate {
-	glu.deleted_at = nil
-	glu.cleardeleted_at = true
+	glu.mutation.ClearDeletedAt()
 	return glu
 }
 
 // SetName sets the name field.
 func (glu *GroceryListUpdate) SetName(s string) *GroceryListUpdate {
-	glu.name = &s
+	glu.mutation.SetName(s)
 	return glu
 }
 
@@ -98,12 +93,7 @@ func (glu *GroceryListUpdate) SetNillableName(s *string) *GroceryListUpdate {
 
 // AddMemberIDs adds the members edge to User by ids.
 func (glu *GroceryListUpdate) AddMemberIDs(ids ...int) *GroceryListUpdate {
-	if glu.members == nil {
-		glu.members = make(map[int]struct{})
-	}
-	for i := range ids {
-		glu.members[ids[i]] = struct{}{}
-	}
+	glu.mutation.AddMemberIDs(ids...)
 	return glu
 }
 
@@ -118,12 +108,7 @@ func (glu *GroceryListUpdate) AddMembers(u ...*User) *GroceryListUpdate {
 
 // RemoveMemberIDs removes the members edge to User by ids.
 func (glu *GroceryListUpdate) RemoveMemberIDs(ids ...int) *GroceryListUpdate {
-	if glu.removedMembers == nil {
-		glu.removedMembers = make(map[int]struct{})
-	}
-	for i := range ids {
-		glu.removedMembers[ids[i]] = struct{}{}
-	}
+	glu.mutation.RemoveMemberIDs(ids...)
 	return glu
 }
 
@@ -138,7 +123,31 @@ func (glu *GroceryListUpdate) RemoveMembers(u ...*User) *GroceryListUpdate {
 
 // Save executes the query and returns the number of rows/vertices matched by this operation.
 func (glu *GroceryListUpdate) Save(ctx context.Context) (int, error) {
-	return glu.sqlSave(ctx)
+
+	var (
+		err      error
+		affected int
+	)
+	if len(glu.hooks) == 0 {
+		affected, err = glu.sqlSave(ctx)
+	} else {
+		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
+			mutation, ok := m.(*GroceryListMutation)
+			if !ok {
+				return nil, fmt.Errorf("unexpected mutation type %T", m)
+			}
+			glu.mutation = mutation
+			affected, err = glu.sqlSave(ctx)
+			return affected, err
+		})
+		for i := len(glu.hooks) - 1; i >= 0; i-- {
+			mut = glu.hooks[i](mut)
+		}
+		if _, err := mut.Mutate(ctx, glu.mutation); err != nil {
+			return 0, err
+		}
+	}
+	return affected, err
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -181,41 +190,41 @@ func (glu *GroceryListUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			}
 		}
 	}
-	if value := glu.created_at; value != nil {
+	if value, ok := glu.mutation.CreatedAt(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
-			Value:  *value,
+			Value:  value,
 			Column: grocerylist.FieldCreatedAt,
 		})
 	}
-	if value := glu.modified_at; value != nil {
+	if value, ok := glu.mutation.ModifiedAt(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
-			Value:  *value,
+			Value:  value,
 			Column: grocerylist.FieldModifiedAt,
 		})
 	}
-	if value := glu.deleted_at; value != nil {
+	if value, ok := glu.mutation.DeletedAt(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
-			Value:  *value,
+			Value:  value,
 			Column: grocerylist.FieldDeletedAt,
 		})
 	}
-	if glu.cleardeleted_at {
+	if glu.mutation.DeletedAtCleared() {
 		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
 			Column: grocerylist.FieldDeletedAt,
 		})
 	}
-	if value := glu.name; value != nil {
+	if value, ok := glu.mutation.Name(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeString,
-			Value:  *value,
+			Value:  value,
 			Column: grocerylist.FieldName,
 		})
 	}
-	if nodes := glu.removedMembers; len(nodes) > 0 {
+	if nodes := glu.mutation.RemovedMembersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: true,
@@ -229,12 +238,12 @@ func (glu *GroceryListUpdate) sqlSave(ctx context.Context) (n int, err error) {
 				},
 			},
 		}
-		for k, _ := range nodes {
+		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := glu.members; len(nodes) > 0 {
+	if nodes := glu.mutation.MembersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: true,
@@ -248,13 +257,15 @@ func (glu *GroceryListUpdate) sqlSave(ctx context.Context) (n int, err error) {
 				},
 			},
 		}
-		for k, _ := range nodes {
+		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, glu.driver, _spec); err != nil {
-		if cerr, ok := isSQLConstraintError(err); ok {
+		if _, ok := err.(*sqlgraph.NotFoundError); ok {
+			err = &NotFoundError{grocerylist.Label}
+		} else if cerr, ok := isSQLConstraintError(err); ok {
 			err = cerr
 		}
 		return 0, err
@@ -265,19 +276,13 @@ func (glu *GroceryListUpdate) sqlSave(ctx context.Context) (n int, err error) {
 // GroceryListUpdateOne is the builder for updating a single GroceryList entity.
 type GroceryListUpdateOne struct {
 	config
-	id              int
-	created_at      *time.Time
-	modified_at     *time.Time
-	deleted_at      *time.Time
-	cleardeleted_at bool
-	name            *string
-	members         map[int]struct{}
-	removedMembers  map[int]struct{}
+	hooks    []Hook
+	mutation *GroceryListMutation
 }
 
 // SetCreatedAt sets the created_at field.
 func (gluo *GroceryListUpdateOne) SetCreatedAt(t time.Time) *GroceryListUpdateOne {
-	gluo.created_at = &t
+	gluo.mutation.SetCreatedAt(t)
 	return gluo
 }
 
@@ -291,7 +296,7 @@ func (gluo *GroceryListUpdateOne) SetNillableCreatedAt(t *time.Time) *GroceryLis
 
 // SetModifiedAt sets the modified_at field.
 func (gluo *GroceryListUpdateOne) SetModifiedAt(t time.Time) *GroceryListUpdateOne {
-	gluo.modified_at = &t
+	gluo.mutation.SetModifiedAt(t)
 	return gluo
 }
 
@@ -305,7 +310,7 @@ func (gluo *GroceryListUpdateOne) SetNillableModifiedAt(t *time.Time) *GroceryLi
 
 // SetDeletedAt sets the deleted_at field.
 func (gluo *GroceryListUpdateOne) SetDeletedAt(t time.Time) *GroceryListUpdateOne {
-	gluo.deleted_at = &t
+	gluo.mutation.SetDeletedAt(t)
 	return gluo
 }
 
@@ -319,14 +324,13 @@ func (gluo *GroceryListUpdateOne) SetNillableDeletedAt(t *time.Time) *GroceryLis
 
 // ClearDeletedAt clears the value of deleted_at.
 func (gluo *GroceryListUpdateOne) ClearDeletedAt() *GroceryListUpdateOne {
-	gluo.deleted_at = nil
-	gluo.cleardeleted_at = true
+	gluo.mutation.ClearDeletedAt()
 	return gluo
 }
 
 // SetName sets the name field.
 func (gluo *GroceryListUpdateOne) SetName(s string) *GroceryListUpdateOne {
-	gluo.name = &s
+	gluo.mutation.SetName(s)
 	return gluo
 }
 
@@ -340,12 +344,7 @@ func (gluo *GroceryListUpdateOne) SetNillableName(s *string) *GroceryListUpdateO
 
 // AddMemberIDs adds the members edge to User by ids.
 func (gluo *GroceryListUpdateOne) AddMemberIDs(ids ...int) *GroceryListUpdateOne {
-	if gluo.members == nil {
-		gluo.members = make(map[int]struct{})
-	}
-	for i := range ids {
-		gluo.members[ids[i]] = struct{}{}
-	}
+	gluo.mutation.AddMemberIDs(ids...)
 	return gluo
 }
 
@@ -360,12 +359,7 @@ func (gluo *GroceryListUpdateOne) AddMembers(u ...*User) *GroceryListUpdateOne {
 
 // RemoveMemberIDs removes the members edge to User by ids.
 func (gluo *GroceryListUpdateOne) RemoveMemberIDs(ids ...int) *GroceryListUpdateOne {
-	if gluo.removedMembers == nil {
-		gluo.removedMembers = make(map[int]struct{})
-	}
-	for i := range ids {
-		gluo.removedMembers[ids[i]] = struct{}{}
-	}
+	gluo.mutation.RemoveMemberIDs(ids...)
 	return gluo
 }
 
@@ -380,7 +374,31 @@ func (gluo *GroceryListUpdateOne) RemoveMembers(u ...*User) *GroceryListUpdateOn
 
 // Save executes the query and returns the updated entity.
 func (gluo *GroceryListUpdateOne) Save(ctx context.Context) (*GroceryList, error) {
-	return gluo.sqlSave(ctx)
+
+	var (
+		err  error
+		node *GroceryList
+	)
+	if len(gluo.hooks) == 0 {
+		node, err = gluo.sqlSave(ctx)
+	} else {
+		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
+			mutation, ok := m.(*GroceryListMutation)
+			if !ok {
+				return nil, fmt.Errorf("unexpected mutation type %T", m)
+			}
+			gluo.mutation = mutation
+			node, err = gluo.sqlSave(ctx)
+			return node, err
+		})
+		for i := len(gluo.hooks) - 1; i >= 0; i-- {
+			mut = gluo.hooks[i](mut)
+		}
+		if _, err := mut.Mutate(ctx, gluo.mutation); err != nil {
+			return nil, err
+		}
+	}
+	return node, err
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -411,47 +429,51 @@ func (gluo *GroceryListUpdateOne) sqlSave(ctx context.Context) (gl *GroceryList,
 			Table:   grocerylist.Table,
 			Columns: grocerylist.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Value:  gluo.id,
 				Type:   field.TypeInt,
 				Column: grocerylist.FieldID,
 			},
 		},
 	}
-	if value := gluo.created_at; value != nil {
+	id, ok := gluo.mutation.ID()
+	if !ok {
+		return nil, fmt.Errorf("missing GroceryList.ID for update")
+	}
+	_spec.Node.ID.Value = id
+	if value, ok := gluo.mutation.CreatedAt(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
-			Value:  *value,
+			Value:  value,
 			Column: grocerylist.FieldCreatedAt,
 		})
 	}
-	if value := gluo.modified_at; value != nil {
+	if value, ok := gluo.mutation.ModifiedAt(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
-			Value:  *value,
+			Value:  value,
 			Column: grocerylist.FieldModifiedAt,
 		})
 	}
-	if value := gluo.deleted_at; value != nil {
+	if value, ok := gluo.mutation.DeletedAt(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
-			Value:  *value,
+			Value:  value,
 			Column: grocerylist.FieldDeletedAt,
 		})
 	}
-	if gluo.cleardeleted_at {
+	if gluo.mutation.DeletedAtCleared() {
 		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
 			Column: grocerylist.FieldDeletedAt,
 		})
 	}
-	if value := gluo.name; value != nil {
+	if value, ok := gluo.mutation.Name(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeString,
-			Value:  *value,
+			Value:  value,
 			Column: grocerylist.FieldName,
 		})
 	}
-	if nodes := gluo.removedMembers; len(nodes) > 0 {
+	if nodes := gluo.mutation.RemovedMembersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: true,
@@ -465,12 +487,12 @@ func (gluo *GroceryListUpdateOne) sqlSave(ctx context.Context) (gl *GroceryList,
 				},
 			},
 		}
-		for k, _ := range nodes {
+		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := gluo.members; len(nodes) > 0 {
+	if nodes := gluo.mutation.MembersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: true,
@@ -484,7 +506,7 @@ func (gluo *GroceryListUpdateOne) sqlSave(ctx context.Context) (gl *GroceryList,
 				},
 			},
 		}
-		for k, _ := range nodes {
+		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
@@ -493,7 +515,9 @@ func (gluo *GroceryListUpdateOne) sqlSave(ctx context.Context) (gl *GroceryList,
 	_spec.Assign = gl.assignValues
 	_spec.ScanValues = gl.scanValues()
 	if err = sqlgraph.UpdateNode(ctx, gluo.driver, _spec); err != nil {
-		if cerr, ok := isSQLConstraintError(err); ok {
+		if _, ok := err.(*sqlgraph.NotFoundError); ok {
+			err = &NotFoundError{grocerylist.Label}
+		} else if cerr, ok := isSQLConstraintError(err); ok {
 			err = cerr
 		}
 		return nil, err

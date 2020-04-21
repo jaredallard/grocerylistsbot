@@ -5,6 +5,7 @@ package ent
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/facebookincubator/ent/dialect/sql/sqlgraph"
@@ -16,17 +17,13 @@ import (
 // UserCreate is the builder for creating a User entity.
 type UserCreate struct {
 	config
-	created_at  *time.Time
-	modified_at *time.Time
-	deleted_at  *time.Time
-	name        *string
-	grocerylist map[int]struct{}
-	active_list map[int]struct{}
+	mutation *UserMutation
+	hooks    []Hook
 }
 
 // SetCreatedAt sets the created_at field.
 func (uc *UserCreate) SetCreatedAt(t time.Time) *UserCreate {
-	uc.created_at = &t
+	uc.mutation.SetCreatedAt(t)
 	return uc
 }
 
@@ -40,7 +37,7 @@ func (uc *UserCreate) SetNillableCreatedAt(t *time.Time) *UserCreate {
 
 // SetModifiedAt sets the modified_at field.
 func (uc *UserCreate) SetModifiedAt(t time.Time) *UserCreate {
-	uc.modified_at = &t
+	uc.mutation.SetModifiedAt(t)
 	return uc
 }
 
@@ -54,7 +51,7 @@ func (uc *UserCreate) SetNillableModifiedAt(t *time.Time) *UserCreate {
 
 // SetDeletedAt sets the deleted_at field.
 func (uc *UserCreate) SetDeletedAt(t time.Time) *UserCreate {
-	uc.deleted_at = &t
+	uc.mutation.SetDeletedAt(t)
 	return uc
 }
 
@@ -68,18 +65,13 @@ func (uc *UserCreate) SetNillableDeletedAt(t *time.Time) *UserCreate {
 
 // SetName sets the name field.
 func (uc *UserCreate) SetName(s string) *UserCreate {
-	uc.name = &s
+	uc.mutation.SetName(s)
 	return uc
 }
 
 // AddGrocerylistIDs adds the grocerylist edge to GroceryList by ids.
 func (uc *UserCreate) AddGrocerylistIDs(ids ...int) *UserCreate {
-	if uc.grocerylist == nil {
-		uc.grocerylist = make(map[int]struct{})
-	}
-	for i := range ids {
-		uc.grocerylist[ids[i]] = struct{}{}
-	}
+	uc.mutation.AddGrocerylistIDs(ids...)
 	return uc
 }
 
@@ -94,10 +86,7 @@ func (uc *UserCreate) AddGrocerylist(g ...*GroceryList) *UserCreate {
 
 // SetActiveListID sets the active_list edge to GroceryList by id.
 func (uc *UserCreate) SetActiveListID(id int) *UserCreate {
-	if uc.active_list == nil {
-		uc.active_list = make(map[int]struct{})
-	}
-	uc.active_list[id] = struct{}{}
+	uc.mutation.SetActiveListID(id)
 	return uc
 }
 
@@ -116,21 +105,41 @@ func (uc *UserCreate) SetActiveList(g *GroceryList) *UserCreate {
 
 // Save creates the User in the database.
 func (uc *UserCreate) Save(ctx context.Context) (*User, error) {
-	if uc.created_at == nil {
+	if _, ok := uc.mutation.CreatedAt(); !ok {
 		v := user.DefaultCreatedAt()
-		uc.created_at = &v
+		uc.mutation.SetCreatedAt(v)
 	}
-	if uc.modified_at == nil {
+	if _, ok := uc.mutation.ModifiedAt(); !ok {
 		v := user.DefaultModifiedAt()
-		uc.modified_at = &v
+		uc.mutation.SetModifiedAt(v)
 	}
-	if uc.name == nil {
+	if _, ok := uc.mutation.Name(); !ok {
 		return nil, errors.New("ent: missing required field \"name\"")
 	}
-	if len(uc.active_list) > 1 {
-		return nil, errors.New("ent: multiple assignments on a unique edge \"active_list\"")
+	var (
+		err  error
+		node *User
+	)
+	if len(uc.hooks) == 0 {
+		node, err = uc.sqlSave(ctx)
+	} else {
+		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
+			mutation, ok := m.(*UserMutation)
+			if !ok {
+				return nil, fmt.Errorf("unexpected mutation type %T", m)
+			}
+			uc.mutation = mutation
+			node, err = uc.sqlSave(ctx)
+			return node, err
+		})
+		for i := len(uc.hooks) - 1; i >= 0; i-- {
+			mut = uc.hooks[i](mut)
+		}
+		if _, err := mut.Mutate(ctx, uc.mutation); err != nil {
+			return nil, err
+		}
 	}
-	return uc.sqlSave(ctx)
+	return node, err
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -153,39 +162,39 @@ func (uc *UserCreate) sqlSave(ctx context.Context) (*User, error) {
 			},
 		}
 	)
-	if value := uc.created_at; value != nil {
+	if value, ok := uc.mutation.CreatedAt(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
-			Value:  *value,
+			Value:  value,
 			Column: user.FieldCreatedAt,
 		})
-		u.CreatedAt = *value
+		u.CreatedAt = value
 	}
-	if value := uc.modified_at; value != nil {
+	if value, ok := uc.mutation.ModifiedAt(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
-			Value:  *value,
+			Value:  value,
 			Column: user.FieldModifiedAt,
 		})
-		u.ModifiedAt = *value
+		u.ModifiedAt = value
 	}
-	if value := uc.deleted_at; value != nil {
+	if value, ok := uc.mutation.DeletedAt(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
-			Value:  *value,
+			Value:  value,
 			Column: user.FieldDeletedAt,
 		})
-		u.DeletedAt = value
+		u.DeletedAt = &value
 	}
-	if value := uc.name; value != nil {
+	if value, ok := uc.mutation.Name(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
 			Type:   field.TypeString,
-			Value:  *value,
+			Value:  value,
 			Column: user.FieldName,
 		})
-		u.Name = *value
+		u.Name = value
 	}
-	if nodes := uc.grocerylist; len(nodes) > 0 {
+	if nodes := uc.mutation.GrocerylistIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
@@ -199,12 +208,12 @@ func (uc *UserCreate) sqlSave(ctx context.Context) (*User, error) {
 				},
 			},
 		}
-		for k, _ := range nodes {
+		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := uc.active_list; len(nodes) > 0 {
+	if nodes := uc.mutation.ActiveListIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
@@ -218,7 +227,7 @@ func (uc *UserCreate) sqlSave(ctx context.Context) (*User, error) {
 				},
 			},
 		}
-		for k, _ := range nodes {
+		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_spec.Edges = append(_spec.Edges, edge)

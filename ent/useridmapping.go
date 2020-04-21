@@ -127,14 +127,14 @@ func (uim *UserIDMapping) assignValues(values ...interface{}) error {
 
 // QueryUser queries the user edge of the UserIDMapping.
 func (uim *UserIDMapping) QueryUser() *UserQuery {
-	return (&UserIDMappingClient{uim.config}).QueryUser(uim)
+	return (&UserIDMappingClient{config: uim.config}).QueryUser(uim)
 }
 
 // Update returns a builder for updating this UserIDMapping.
 // Note that, you need to call UserIDMapping.Unwrap() before calling this method, if this UserIDMapping
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (uim *UserIDMapping) Update() *UserIDMappingUpdateOne {
-	return (&UserIDMappingClient{uim.config}).UpdateOne(uim)
+	return (&UserIDMappingClient{config: uim.config}).UpdateOne(uim)
 }
 
 // Unwrap unwraps the entity that was returned from a transaction after it was closed,

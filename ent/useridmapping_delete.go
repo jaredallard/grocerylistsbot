@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/facebookincubator/ent/dialect/sql"
 	"github.com/facebookincubator/ent/dialect/sql/sqlgraph"
@@ -15,6 +16,8 @@ import (
 // UserIDMappingDelete is the builder for deleting a UserIDMapping entity.
 type UserIDMappingDelete struct {
 	config
+	hooks      []Hook
+	mutation   *UserIDMappingMutation
 	predicates []predicate.UserIDMapping
 }
 
@@ -26,7 +29,30 @@ func (uimd *UserIDMappingDelete) Where(ps ...predicate.UserIDMapping) *UserIDMap
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (uimd *UserIDMappingDelete) Exec(ctx context.Context) (int, error) {
-	return uimd.sqlExec(ctx)
+	var (
+		err      error
+		affected int
+	)
+	if len(uimd.hooks) == 0 {
+		affected, err = uimd.sqlExec(ctx)
+	} else {
+		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
+			mutation, ok := m.(*UserIDMappingMutation)
+			if !ok {
+				return nil, fmt.Errorf("unexpected mutation type %T", m)
+			}
+			uimd.mutation = mutation
+			affected, err = uimd.sqlExec(ctx)
+			return affected, err
+		})
+		for i := len(uimd.hooks) - 1; i >= 0; i-- {
+			mut = uimd.hooks[i](mut)
+		}
+		if _, err := mut.Mutate(ctx, uimd.mutation); err != nil {
+			return 0, err
+		}
+	}
+	return affected, err
 }
 
 // ExecX is like Exec, but panics if an error occurs.

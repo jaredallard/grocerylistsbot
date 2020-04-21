@@ -5,26 +5,21 @@ package useridmapping
 import (
 	"fmt"
 	"time"
-
-	"github.com/facebookincubator/ent"
-	"github.com/jaredallard/grocerylistsbot/ent/schema"
 )
 
 const (
 	// Label holds the string label denoting the useridmapping type in the database.
 	Label = "user_id_mapping"
 	// FieldID holds the string denoting the id field in the database.
-	FieldID = "id"
-	// FieldCreatedAt holds the string denoting the created_at vertex property in the database.
-	FieldCreatedAt = "created_at"
-	// FieldModifiedAt holds the string denoting the modified_at vertex property in the database.
-	FieldModifiedAt = "modified_at"
-	// FieldDeletedAt holds the string denoting the deleted_at vertex property in the database.
-	FieldDeletedAt = "deleted_at"
-	// FieldPlatformType holds the string denoting the platform_type vertex property in the database.
-	FieldPlatformType = "platform_type"
-	// FieldPlatformID holds the string denoting the platform_id vertex property in the database.
-	FieldPlatformID = "platform_id"
+	FieldID           = "id"            // FieldCreatedAt holds the string denoting the created_at vertex property in the database.
+	FieldCreatedAt    = "created_at"    // FieldModifiedAt holds the string denoting the modified_at vertex property in the database.
+	FieldModifiedAt   = "modified_at"   // FieldDeletedAt holds the string denoting the deleted_at vertex property in the database.
+	FieldDeletedAt    = "deleted_at"    // FieldPlatformType holds the string denoting the platform_type vertex property in the database.
+	FieldPlatformType = "platform_type" // FieldPlatformID holds the string denoting the platform_id vertex property in the database.
+	FieldPlatformID   = "platform_id"
+
+	// EdgeUser holds the string denoting the user edge name in mutations.
+	EdgeUser = "user"
 
 	// Table holds the table name of the useridmapping in the database.
 	Table = "user_id_mappings"
@@ -53,21 +48,10 @@ var ForeignKeys = []string{
 }
 
 var (
-	mixin       = schema.UserIDMapping{}.Mixin()
-	mixinFields = [...][]ent.Field{
-		mixin[0].Fields(),
-	}
-	fields = schema.UserIDMapping{}.Fields()
-
-	// descCreatedAt is the schema descriptor for created_at field.
-	descCreatedAt = mixinFields[0][0].Descriptor()
 	// DefaultCreatedAt holds the default value on creation for the created_at field.
-	DefaultCreatedAt = descCreatedAt.Default.(func() time.Time)
-
-	// descModifiedAt is the schema descriptor for modified_at field.
-	descModifiedAt = mixinFields[0][1].Descriptor()
+	DefaultCreatedAt func() time.Time
 	// DefaultModifiedAt holds the default value on creation for the modified_at field.
-	DefaultModifiedAt = descModifiedAt.Default.(func() time.Time)
+	DefaultModifiedAt func() time.Time
 )
 
 // PlatformType defines the type for the platform_type enum field.

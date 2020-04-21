@@ -135,14 +135,14 @@ func (gi *GroceryItem) assignValues(values ...interface{}) error {
 
 // QueryGrocerylist queries the grocerylist edge of the GroceryItem.
 func (gi *GroceryItem) QueryGrocerylist() *GroceryListQuery {
-	return (&GroceryItemClient{gi.config}).QueryGrocerylist(gi)
+	return (&GroceryItemClient{config: gi.config}).QueryGrocerylist(gi)
 }
 
 // Update returns a builder for updating this GroceryItem.
 // Note that, you need to call GroceryItem.Unwrap() before calling this method, if this GroceryItem
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (gi *GroceryItem) Update() *GroceryItemUpdateOne {
-	return (&GroceryItemClient{gi.config}).UpdateOne(gi)
+	return (&GroceryItemClient{config: gi.config}).UpdateOne(gi)
 }
 
 // Unwrap unwraps the entity that was returned from a transaction after it was closed,

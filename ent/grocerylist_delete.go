@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/facebookincubator/ent/dialect/sql"
 	"github.com/facebookincubator/ent/dialect/sql/sqlgraph"
@@ -15,6 +16,8 @@ import (
 // GroceryListDelete is the builder for deleting a GroceryList entity.
 type GroceryListDelete struct {
 	config
+	hooks      []Hook
+	mutation   *GroceryListMutation
 	predicates []predicate.GroceryList
 }
 
@@ -26,7 +29,30 @@ func (gld *GroceryListDelete) Where(ps ...predicate.GroceryList) *GroceryListDel
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (gld *GroceryListDelete) Exec(ctx context.Context) (int, error) {
-	return gld.sqlExec(ctx)
+	var (
+		err      error
+		affected int
+	)
+	if len(gld.hooks) == 0 {
+		affected, err = gld.sqlExec(ctx)
+	} else {
+		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
+			mutation, ok := m.(*GroceryListMutation)
+			if !ok {
+				return nil, fmt.Errorf("unexpected mutation type %T", m)
+			}
+			gld.mutation = mutation
+			affected, err = gld.sqlExec(ctx)
+			return affected, err
+		})
+		for i := len(gld.hooks) - 1; i >= 0; i-- {
+			mut = gld.hooks[i](mut)
+		}
+		if _, err := mut.Mutate(ctx, gld.mutation); err != nil {
+			return 0, err
+		}
+	}
+	return affected, err
 }
 
 // ExecX is like Exec, but panics if an error occurs.

@@ -5,28 +5,22 @@ package groceryitem
 import (
 	"fmt"
 	"time"
-
-	"github.com/facebookincubator/ent"
-	"github.com/jaredallard/grocerylistsbot/ent/schema"
 )
 
 const (
 	// Label holds the string label denoting the groceryitem type in the database.
 	Label = "grocery_item"
 	// FieldID holds the string denoting the id field in the database.
-	FieldID = "id"
-	// FieldCreatedAt holds the string denoting the created_at vertex property in the database.
-	FieldCreatedAt = "created_at"
-	// FieldModifiedAt holds the string denoting the modified_at vertex property in the database.
-	FieldModifiedAt = "modified_at"
-	// FieldDeletedAt holds the string denoting the deleted_at vertex property in the database.
-	FieldDeletedAt = "deleted_at"
-	// FieldName holds the string denoting the name vertex property in the database.
-	FieldName = "name"
-	// FieldStatus holds the string denoting the status vertex property in the database.
-	FieldStatus = "status"
-	// FieldPrice holds the string denoting the price vertex property in the database.
-	FieldPrice = "price"
+	FieldID         = "id"          // FieldCreatedAt holds the string denoting the created_at vertex property in the database.
+	FieldCreatedAt  = "created_at"  // FieldModifiedAt holds the string denoting the modified_at vertex property in the database.
+	FieldModifiedAt = "modified_at" // FieldDeletedAt holds the string denoting the deleted_at vertex property in the database.
+	FieldDeletedAt  = "deleted_at"  // FieldName holds the string denoting the name vertex property in the database.
+	FieldName       = "name"        // FieldStatus holds the string denoting the status vertex property in the database.
+	FieldStatus     = "status"      // FieldPrice holds the string denoting the price vertex property in the database.
+	FieldPrice      = "price"
+
+	// EdgeGrocerylist holds the string denoting the grocerylist edge name in mutations.
+	EdgeGrocerylist = "grocerylist"
 
 	// Table holds the table name of the groceryitem in the database.
 	Table = "grocery_items"
@@ -56,21 +50,10 @@ var ForeignKeys = []string{
 }
 
 var (
-	mixin       = schema.GroceryItem{}.Mixin()
-	mixinFields = [...][]ent.Field{
-		mixin[0].Fields(),
-	}
-	fields = schema.GroceryItem{}.Fields()
-
-	// descCreatedAt is the schema descriptor for created_at field.
-	descCreatedAt = mixinFields[0][0].Descriptor()
 	// DefaultCreatedAt holds the default value on creation for the created_at field.
-	DefaultCreatedAt = descCreatedAt.Default.(func() time.Time)
-
-	// descModifiedAt is the schema descriptor for modified_at field.
-	descModifiedAt = mixinFields[0][1].Descriptor()
+	DefaultCreatedAt func() time.Time
 	// DefaultModifiedAt holds the default value on creation for the modified_at field.
-	DefaultModifiedAt = descModifiedAt.Default.(func() time.Time)
+	DefaultModifiedAt func() time.Time
 )
 
 // Status defines the type for the status enum field.

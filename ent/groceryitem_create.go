@@ -17,18 +17,13 @@ import (
 // GroceryItemCreate is the builder for creating a GroceryItem entity.
 type GroceryItemCreate struct {
 	config
-	created_at  *time.Time
-	modified_at *time.Time
-	deleted_at  *time.Time
-	name        *string
-	status      *groceryitem.Status
-	price       *float64
-	grocerylist map[int]struct{}
+	mutation *GroceryItemMutation
+	hooks    []Hook
 }
 
 // SetCreatedAt sets the created_at field.
 func (gic *GroceryItemCreate) SetCreatedAt(t time.Time) *GroceryItemCreate {
-	gic.created_at = &t
+	gic.mutation.SetCreatedAt(t)
 	return gic
 }
 
@@ -42,7 +37,7 @@ func (gic *GroceryItemCreate) SetNillableCreatedAt(t *time.Time) *GroceryItemCre
 
 // SetModifiedAt sets the modified_at field.
 func (gic *GroceryItemCreate) SetModifiedAt(t time.Time) *GroceryItemCreate {
-	gic.modified_at = &t
+	gic.mutation.SetModifiedAt(t)
 	return gic
 }
 
@@ -56,7 +51,7 @@ func (gic *GroceryItemCreate) SetNillableModifiedAt(t *time.Time) *GroceryItemCr
 
 // SetDeletedAt sets the deleted_at field.
 func (gic *GroceryItemCreate) SetDeletedAt(t time.Time) *GroceryItemCreate {
-	gic.deleted_at = &t
+	gic.mutation.SetDeletedAt(t)
 	return gic
 }
 
@@ -70,13 +65,13 @@ func (gic *GroceryItemCreate) SetNillableDeletedAt(t *time.Time) *GroceryItemCre
 
 // SetName sets the name field.
 func (gic *GroceryItemCreate) SetName(s string) *GroceryItemCreate {
-	gic.name = &s
+	gic.mutation.SetName(s)
 	return gic
 }
 
 // SetStatus sets the status field.
 func (gic *GroceryItemCreate) SetStatus(gr groceryitem.Status) *GroceryItemCreate {
-	gic.status = &gr
+	gic.mutation.SetStatus(gr)
 	return gic
 }
 
@@ -90,7 +85,7 @@ func (gic *GroceryItemCreate) SetNillableStatus(gr *groceryitem.Status) *Grocery
 
 // SetPrice sets the price field.
 func (gic *GroceryItemCreate) SetPrice(f float64) *GroceryItemCreate {
-	gic.price = &f
+	gic.mutation.SetPrice(f)
 	return gic
 }
 
@@ -104,10 +99,7 @@ func (gic *GroceryItemCreate) SetNillablePrice(f *float64) *GroceryItemCreate {
 
 // SetGrocerylistID sets the grocerylist edge to GroceryList by id.
 func (gic *GroceryItemCreate) SetGrocerylistID(id int) *GroceryItemCreate {
-	if gic.grocerylist == nil {
-		gic.grocerylist = make(map[int]struct{})
-	}
-	gic.grocerylist[id] = struct{}{}
+	gic.mutation.SetGrocerylistID(id)
 	return gic
 }
 
@@ -126,28 +118,50 @@ func (gic *GroceryItemCreate) SetGrocerylist(g *GroceryList) *GroceryItemCreate 
 
 // Save creates the GroceryItem in the database.
 func (gic *GroceryItemCreate) Save(ctx context.Context) (*GroceryItem, error) {
-	if gic.created_at == nil {
+	if _, ok := gic.mutation.CreatedAt(); !ok {
 		v := groceryitem.DefaultCreatedAt()
-		gic.created_at = &v
+		gic.mutation.SetCreatedAt(v)
 	}
-	if gic.modified_at == nil {
+	if _, ok := gic.mutation.ModifiedAt(); !ok {
 		v := groceryitem.DefaultModifiedAt()
-		gic.modified_at = &v
+		gic.mutation.SetModifiedAt(v)
 	}
-	if gic.name == nil {
+	if _, ok := gic.mutation.Name(); !ok {
 		return nil, errors.New("ent: missing required field \"name\"")
 	}
-	if gic.status == nil {
+	if _, ok := gic.mutation.Status(); !ok {
 		v := groceryitem.DefaultStatus
-		gic.status = &v
+		gic.mutation.SetStatus(v)
 	}
-	if err := groceryitem.StatusValidator(*gic.status); err != nil {
-		return nil, fmt.Errorf("ent: validator failed for field \"status\": %v", err)
+	if v, ok := gic.mutation.Status(); ok {
+		if err := groceryitem.StatusValidator(v); err != nil {
+			return nil, fmt.Errorf("ent: validator failed for field \"status\": %v", err)
+		}
 	}
-	if len(gic.grocerylist) > 1 {
-		return nil, errors.New("ent: multiple assignments on a unique edge \"grocerylist\"")
+	var (
+		err  error
+		node *GroceryItem
+	)
+	if len(gic.hooks) == 0 {
+		node, err = gic.sqlSave(ctx)
+	} else {
+		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
+			mutation, ok := m.(*GroceryItemMutation)
+			if !ok {
+				return nil, fmt.Errorf("unexpected mutation type %T", m)
+			}
+			gic.mutation = mutation
+			node, err = gic.sqlSave(ctx)
+			return node, err
+		})
+		for i := len(gic.hooks) - 1; i >= 0; i-- {
+			mut = gic.hooks[i](mut)
+		}
+		if _, err := mut.Mutate(ctx, gic.mutation); err != nil {
+			return nil, err
+		}
 	}
-	return gic.sqlSave(ctx)
+	return node, err
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -170,55 +184,55 @@ func (gic *GroceryItemCreate) sqlSave(ctx context.Context) (*GroceryItem, error)
 			},
 		}
 	)
-	if value := gic.created_at; value != nil {
+	if value, ok := gic.mutation.CreatedAt(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
-			Value:  *value,
+			Value:  value,
 			Column: groceryitem.FieldCreatedAt,
 		})
-		gi.CreatedAt = *value
+		gi.CreatedAt = value
 	}
-	if value := gic.modified_at; value != nil {
+	if value, ok := gic.mutation.ModifiedAt(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
-			Value:  *value,
+			Value:  value,
 			Column: groceryitem.FieldModifiedAt,
 		})
-		gi.ModifiedAt = *value
+		gi.ModifiedAt = value
 	}
-	if value := gic.deleted_at; value != nil {
+	if value, ok := gic.mutation.DeletedAt(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
-			Value:  *value,
+			Value:  value,
 			Column: groceryitem.FieldDeletedAt,
 		})
-		gi.DeletedAt = value
+		gi.DeletedAt = &value
 	}
-	if value := gic.name; value != nil {
+	if value, ok := gic.mutation.Name(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
 			Type:   field.TypeString,
-			Value:  *value,
+			Value:  value,
 			Column: groceryitem.FieldName,
 		})
-		gi.Name = *value
+		gi.Name = value
 	}
-	if value := gic.status; value != nil {
+	if value, ok := gic.mutation.Status(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
 			Type:   field.TypeEnum,
-			Value:  *value,
+			Value:  value,
 			Column: groceryitem.FieldStatus,
 		})
-		gi.Status = *value
+		gi.Status = value
 	}
-	if value := gic.price; value != nil {
+	if value, ok := gic.mutation.Price(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
 			Type:   field.TypeFloat64,
-			Value:  *value,
+			Value:  value,
 			Column: groceryitem.FieldPrice,
 		})
-		gi.Price = *value
+		gi.Price = value
 	}
-	if nodes := gic.grocerylist; len(nodes) > 0 {
+	if nodes := gic.mutation.GrocerylistIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
@@ -232,7 +246,7 @@ func (gic *GroceryItemCreate) sqlSave(ctx context.Context) (*GroceryItem, error)
 				},
 			},
 		}
-		for k, _ := range nodes {
+		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_spec.Edges = append(_spec.Edges, edge)

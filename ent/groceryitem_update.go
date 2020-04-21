@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -19,18 +18,9 @@ import (
 // GroceryItemUpdate is the builder for updating GroceryItem entities.
 type GroceryItemUpdate struct {
 	config
-	created_at         *time.Time
-	modified_at        *time.Time
-	deleted_at         *time.Time
-	cleardeleted_at    bool
-	name               *string
-	status             *groceryitem.Status
-	price              *float64
-	addprice           *float64
-	clearprice         bool
-	grocerylist        map[int]struct{}
-	clearedGrocerylist bool
-	predicates         []predicate.GroceryItem
+	hooks      []Hook
+	mutation   *GroceryItemMutation
+	predicates []predicate.GroceryItem
 }
 
 // Where adds a new predicate for the builder.
@@ -41,7 +31,7 @@ func (giu *GroceryItemUpdate) Where(ps ...predicate.GroceryItem) *GroceryItemUpd
 
 // SetCreatedAt sets the created_at field.
 func (giu *GroceryItemUpdate) SetCreatedAt(t time.Time) *GroceryItemUpdate {
-	giu.created_at = &t
+	giu.mutation.SetCreatedAt(t)
 	return giu
 }
 
@@ -55,7 +45,7 @@ func (giu *GroceryItemUpdate) SetNillableCreatedAt(t *time.Time) *GroceryItemUpd
 
 // SetModifiedAt sets the modified_at field.
 func (giu *GroceryItemUpdate) SetModifiedAt(t time.Time) *GroceryItemUpdate {
-	giu.modified_at = &t
+	giu.mutation.SetModifiedAt(t)
 	return giu
 }
 
@@ -69,7 +59,7 @@ func (giu *GroceryItemUpdate) SetNillableModifiedAt(t *time.Time) *GroceryItemUp
 
 // SetDeletedAt sets the deleted_at field.
 func (giu *GroceryItemUpdate) SetDeletedAt(t time.Time) *GroceryItemUpdate {
-	giu.deleted_at = &t
+	giu.mutation.SetDeletedAt(t)
 	return giu
 }
 
@@ -83,20 +73,19 @@ func (giu *GroceryItemUpdate) SetNillableDeletedAt(t *time.Time) *GroceryItemUpd
 
 // ClearDeletedAt clears the value of deleted_at.
 func (giu *GroceryItemUpdate) ClearDeletedAt() *GroceryItemUpdate {
-	giu.deleted_at = nil
-	giu.cleardeleted_at = true
+	giu.mutation.ClearDeletedAt()
 	return giu
 }
 
 // SetName sets the name field.
 func (giu *GroceryItemUpdate) SetName(s string) *GroceryItemUpdate {
-	giu.name = &s
+	giu.mutation.SetName(s)
 	return giu
 }
 
 // SetStatus sets the status field.
 func (giu *GroceryItemUpdate) SetStatus(gr groceryitem.Status) *GroceryItemUpdate {
-	giu.status = &gr
+	giu.mutation.SetStatus(gr)
 	return giu
 }
 
@@ -110,8 +99,8 @@ func (giu *GroceryItemUpdate) SetNillableStatus(gr *groceryitem.Status) *Grocery
 
 // SetPrice sets the price field.
 func (giu *GroceryItemUpdate) SetPrice(f float64) *GroceryItemUpdate {
-	giu.price = &f
-	giu.addprice = nil
+	giu.mutation.ResetPrice()
+	giu.mutation.SetPrice(f)
 	return giu
 }
 
@@ -125,27 +114,19 @@ func (giu *GroceryItemUpdate) SetNillablePrice(f *float64) *GroceryItemUpdate {
 
 // AddPrice adds f to price.
 func (giu *GroceryItemUpdate) AddPrice(f float64) *GroceryItemUpdate {
-	if giu.addprice == nil {
-		giu.addprice = &f
-	} else {
-		*giu.addprice += f
-	}
+	giu.mutation.AddPrice(f)
 	return giu
 }
 
 // ClearPrice clears the value of price.
 func (giu *GroceryItemUpdate) ClearPrice() *GroceryItemUpdate {
-	giu.price = nil
-	giu.clearprice = true
+	giu.mutation.ClearPrice()
 	return giu
 }
 
 // SetGrocerylistID sets the grocerylist edge to GroceryList by id.
 func (giu *GroceryItemUpdate) SetGrocerylistID(id int) *GroceryItemUpdate {
-	if giu.grocerylist == nil {
-		giu.grocerylist = make(map[int]struct{})
-	}
-	giu.grocerylist[id] = struct{}{}
+	giu.mutation.SetGrocerylistID(id)
 	return giu
 }
 
@@ -164,21 +145,42 @@ func (giu *GroceryItemUpdate) SetGrocerylist(g *GroceryList) *GroceryItemUpdate 
 
 // ClearGrocerylist clears the grocerylist edge to GroceryList.
 func (giu *GroceryItemUpdate) ClearGrocerylist() *GroceryItemUpdate {
-	giu.clearedGrocerylist = true
+	giu.mutation.ClearGrocerylist()
 	return giu
 }
 
 // Save executes the query and returns the number of rows/vertices matched by this operation.
 func (giu *GroceryItemUpdate) Save(ctx context.Context) (int, error) {
-	if giu.status != nil {
-		if err := groceryitem.StatusValidator(*giu.status); err != nil {
+	if v, ok := giu.mutation.Status(); ok {
+		if err := groceryitem.StatusValidator(v); err != nil {
 			return 0, fmt.Errorf("ent: validator failed for field \"status\": %v", err)
 		}
 	}
-	if len(giu.grocerylist) > 1 {
-		return 0, errors.New("ent: multiple assignments on a unique edge \"grocerylist\"")
+
+	var (
+		err      error
+		affected int
+	)
+	if len(giu.hooks) == 0 {
+		affected, err = giu.sqlSave(ctx)
+	} else {
+		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
+			mutation, ok := m.(*GroceryItemMutation)
+			if !ok {
+				return nil, fmt.Errorf("unexpected mutation type %T", m)
+			}
+			giu.mutation = mutation
+			affected, err = giu.sqlSave(ctx)
+			return affected, err
+		})
+		for i := len(giu.hooks) - 1; i >= 0; i-- {
+			mut = giu.hooks[i](mut)
+		}
+		if _, err := mut.Mutate(ctx, giu.mutation); err != nil {
+			return 0, err
+		}
 	}
-	return giu.sqlSave(ctx)
+	return affected, err
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -221,68 +223,68 @@ func (giu *GroceryItemUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			}
 		}
 	}
-	if value := giu.created_at; value != nil {
+	if value, ok := giu.mutation.CreatedAt(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
-			Value:  *value,
+			Value:  value,
 			Column: groceryitem.FieldCreatedAt,
 		})
 	}
-	if value := giu.modified_at; value != nil {
+	if value, ok := giu.mutation.ModifiedAt(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
-			Value:  *value,
+			Value:  value,
 			Column: groceryitem.FieldModifiedAt,
 		})
 	}
-	if value := giu.deleted_at; value != nil {
+	if value, ok := giu.mutation.DeletedAt(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
-			Value:  *value,
+			Value:  value,
 			Column: groceryitem.FieldDeletedAt,
 		})
 	}
-	if giu.cleardeleted_at {
+	if giu.mutation.DeletedAtCleared() {
 		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
 			Column: groceryitem.FieldDeletedAt,
 		})
 	}
-	if value := giu.name; value != nil {
+	if value, ok := giu.mutation.Name(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeString,
-			Value:  *value,
+			Value:  value,
 			Column: groceryitem.FieldName,
 		})
 	}
-	if value := giu.status; value != nil {
+	if value, ok := giu.mutation.Status(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeEnum,
-			Value:  *value,
+			Value:  value,
 			Column: groceryitem.FieldStatus,
 		})
 	}
-	if value := giu.price; value != nil {
+	if value, ok := giu.mutation.Price(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeFloat64,
-			Value:  *value,
+			Value:  value,
 			Column: groceryitem.FieldPrice,
 		})
 	}
-	if value := giu.addprice; value != nil {
+	if value, ok := giu.mutation.AddedPrice(); ok {
 		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
 			Type:   field.TypeFloat64,
-			Value:  *value,
+			Value:  value,
 			Column: groceryitem.FieldPrice,
 		})
 	}
-	if giu.clearprice {
+	if giu.mutation.PriceCleared() {
 		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
 			Type:   field.TypeFloat64,
 			Column: groceryitem.FieldPrice,
 		})
 	}
-	if giu.clearedGrocerylist {
+	if giu.mutation.GrocerylistCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
@@ -298,7 +300,7 @@ func (giu *GroceryItemUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := giu.grocerylist; len(nodes) > 0 {
+	if nodes := giu.mutation.GrocerylistIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
@@ -312,13 +314,15 @@ func (giu *GroceryItemUpdate) sqlSave(ctx context.Context) (n int, err error) {
 				},
 			},
 		}
-		for k, _ := range nodes {
+		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, giu.driver, _spec); err != nil {
-		if cerr, ok := isSQLConstraintError(err); ok {
+		if _, ok := err.(*sqlgraph.NotFoundError); ok {
+			err = &NotFoundError{groceryitem.Label}
+		} else if cerr, ok := isSQLConstraintError(err); ok {
 			err = cerr
 		}
 		return 0, err
@@ -329,23 +333,13 @@ func (giu *GroceryItemUpdate) sqlSave(ctx context.Context) (n int, err error) {
 // GroceryItemUpdateOne is the builder for updating a single GroceryItem entity.
 type GroceryItemUpdateOne struct {
 	config
-	id                 int
-	created_at         *time.Time
-	modified_at        *time.Time
-	deleted_at         *time.Time
-	cleardeleted_at    bool
-	name               *string
-	status             *groceryitem.Status
-	price              *float64
-	addprice           *float64
-	clearprice         bool
-	grocerylist        map[int]struct{}
-	clearedGrocerylist bool
+	hooks    []Hook
+	mutation *GroceryItemMutation
 }
 
 // SetCreatedAt sets the created_at field.
 func (giuo *GroceryItemUpdateOne) SetCreatedAt(t time.Time) *GroceryItemUpdateOne {
-	giuo.created_at = &t
+	giuo.mutation.SetCreatedAt(t)
 	return giuo
 }
 
@@ -359,7 +353,7 @@ func (giuo *GroceryItemUpdateOne) SetNillableCreatedAt(t *time.Time) *GroceryIte
 
 // SetModifiedAt sets the modified_at field.
 func (giuo *GroceryItemUpdateOne) SetModifiedAt(t time.Time) *GroceryItemUpdateOne {
-	giuo.modified_at = &t
+	giuo.mutation.SetModifiedAt(t)
 	return giuo
 }
 
@@ -373,7 +367,7 @@ func (giuo *GroceryItemUpdateOne) SetNillableModifiedAt(t *time.Time) *GroceryIt
 
 // SetDeletedAt sets the deleted_at field.
 func (giuo *GroceryItemUpdateOne) SetDeletedAt(t time.Time) *GroceryItemUpdateOne {
-	giuo.deleted_at = &t
+	giuo.mutation.SetDeletedAt(t)
 	return giuo
 }
 
@@ -387,20 +381,19 @@ func (giuo *GroceryItemUpdateOne) SetNillableDeletedAt(t *time.Time) *GroceryIte
 
 // ClearDeletedAt clears the value of deleted_at.
 func (giuo *GroceryItemUpdateOne) ClearDeletedAt() *GroceryItemUpdateOne {
-	giuo.deleted_at = nil
-	giuo.cleardeleted_at = true
+	giuo.mutation.ClearDeletedAt()
 	return giuo
 }
 
 // SetName sets the name field.
 func (giuo *GroceryItemUpdateOne) SetName(s string) *GroceryItemUpdateOne {
-	giuo.name = &s
+	giuo.mutation.SetName(s)
 	return giuo
 }
 
 // SetStatus sets the status field.
 func (giuo *GroceryItemUpdateOne) SetStatus(gr groceryitem.Status) *GroceryItemUpdateOne {
-	giuo.status = &gr
+	giuo.mutation.SetStatus(gr)
 	return giuo
 }
 
@@ -414,8 +407,8 @@ func (giuo *GroceryItemUpdateOne) SetNillableStatus(gr *groceryitem.Status) *Gro
 
 // SetPrice sets the price field.
 func (giuo *GroceryItemUpdateOne) SetPrice(f float64) *GroceryItemUpdateOne {
-	giuo.price = &f
-	giuo.addprice = nil
+	giuo.mutation.ResetPrice()
+	giuo.mutation.SetPrice(f)
 	return giuo
 }
 
@@ -429,27 +422,19 @@ func (giuo *GroceryItemUpdateOne) SetNillablePrice(f *float64) *GroceryItemUpdat
 
 // AddPrice adds f to price.
 func (giuo *GroceryItemUpdateOne) AddPrice(f float64) *GroceryItemUpdateOne {
-	if giuo.addprice == nil {
-		giuo.addprice = &f
-	} else {
-		*giuo.addprice += f
-	}
+	giuo.mutation.AddPrice(f)
 	return giuo
 }
 
 // ClearPrice clears the value of price.
 func (giuo *GroceryItemUpdateOne) ClearPrice() *GroceryItemUpdateOne {
-	giuo.price = nil
-	giuo.clearprice = true
+	giuo.mutation.ClearPrice()
 	return giuo
 }
 
 // SetGrocerylistID sets the grocerylist edge to GroceryList by id.
 func (giuo *GroceryItemUpdateOne) SetGrocerylistID(id int) *GroceryItemUpdateOne {
-	if giuo.grocerylist == nil {
-		giuo.grocerylist = make(map[int]struct{})
-	}
-	giuo.grocerylist[id] = struct{}{}
+	giuo.mutation.SetGrocerylistID(id)
 	return giuo
 }
 
@@ -468,21 +453,42 @@ func (giuo *GroceryItemUpdateOne) SetGrocerylist(g *GroceryList) *GroceryItemUpd
 
 // ClearGrocerylist clears the grocerylist edge to GroceryList.
 func (giuo *GroceryItemUpdateOne) ClearGrocerylist() *GroceryItemUpdateOne {
-	giuo.clearedGrocerylist = true
+	giuo.mutation.ClearGrocerylist()
 	return giuo
 }
 
 // Save executes the query and returns the updated entity.
 func (giuo *GroceryItemUpdateOne) Save(ctx context.Context) (*GroceryItem, error) {
-	if giuo.status != nil {
-		if err := groceryitem.StatusValidator(*giuo.status); err != nil {
+	if v, ok := giuo.mutation.Status(); ok {
+		if err := groceryitem.StatusValidator(v); err != nil {
 			return nil, fmt.Errorf("ent: validator failed for field \"status\": %v", err)
 		}
 	}
-	if len(giuo.grocerylist) > 1 {
-		return nil, errors.New("ent: multiple assignments on a unique edge \"grocerylist\"")
+
+	var (
+		err  error
+		node *GroceryItem
+	)
+	if len(giuo.hooks) == 0 {
+		node, err = giuo.sqlSave(ctx)
+	} else {
+		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
+			mutation, ok := m.(*GroceryItemMutation)
+			if !ok {
+				return nil, fmt.Errorf("unexpected mutation type %T", m)
+			}
+			giuo.mutation = mutation
+			node, err = giuo.sqlSave(ctx)
+			return node, err
+		})
+		for i := len(giuo.hooks) - 1; i >= 0; i-- {
+			mut = giuo.hooks[i](mut)
+		}
+		if _, err := mut.Mutate(ctx, giuo.mutation); err != nil {
+			return nil, err
+		}
 	}
-	return giuo.sqlSave(ctx)
+	return node, err
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -513,74 +519,78 @@ func (giuo *GroceryItemUpdateOne) sqlSave(ctx context.Context) (gi *GroceryItem,
 			Table:   groceryitem.Table,
 			Columns: groceryitem.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Value:  giuo.id,
 				Type:   field.TypeInt,
 				Column: groceryitem.FieldID,
 			},
 		},
 	}
-	if value := giuo.created_at; value != nil {
+	id, ok := giuo.mutation.ID()
+	if !ok {
+		return nil, fmt.Errorf("missing GroceryItem.ID for update")
+	}
+	_spec.Node.ID.Value = id
+	if value, ok := giuo.mutation.CreatedAt(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
-			Value:  *value,
+			Value:  value,
 			Column: groceryitem.FieldCreatedAt,
 		})
 	}
-	if value := giuo.modified_at; value != nil {
+	if value, ok := giuo.mutation.ModifiedAt(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
-			Value:  *value,
+			Value:  value,
 			Column: groceryitem.FieldModifiedAt,
 		})
 	}
-	if value := giuo.deleted_at; value != nil {
+	if value, ok := giuo.mutation.DeletedAt(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
-			Value:  *value,
+			Value:  value,
 			Column: groceryitem.FieldDeletedAt,
 		})
 	}
-	if giuo.cleardeleted_at {
+	if giuo.mutation.DeletedAtCleared() {
 		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
 			Column: groceryitem.FieldDeletedAt,
 		})
 	}
-	if value := giuo.name; value != nil {
+	if value, ok := giuo.mutation.Name(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeString,
-			Value:  *value,
+			Value:  value,
 			Column: groceryitem.FieldName,
 		})
 	}
-	if value := giuo.status; value != nil {
+	if value, ok := giuo.mutation.Status(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeEnum,
-			Value:  *value,
+			Value:  value,
 			Column: groceryitem.FieldStatus,
 		})
 	}
-	if value := giuo.price; value != nil {
+	if value, ok := giuo.mutation.Price(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeFloat64,
-			Value:  *value,
+			Value:  value,
 			Column: groceryitem.FieldPrice,
 		})
 	}
-	if value := giuo.addprice; value != nil {
+	if value, ok := giuo.mutation.AddedPrice(); ok {
 		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
 			Type:   field.TypeFloat64,
-			Value:  *value,
+			Value:  value,
 			Column: groceryitem.FieldPrice,
 		})
 	}
-	if giuo.clearprice {
+	if giuo.mutation.PriceCleared() {
 		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
 			Type:   field.TypeFloat64,
 			Column: groceryitem.FieldPrice,
 		})
 	}
-	if giuo.clearedGrocerylist {
+	if giuo.mutation.GrocerylistCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
@@ -596,7 +606,7 @@ func (giuo *GroceryItemUpdateOne) sqlSave(ctx context.Context) (gi *GroceryItem,
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := giuo.grocerylist; len(nodes) > 0 {
+	if nodes := giuo.mutation.GrocerylistIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
@@ -610,7 +620,7 @@ func (giuo *GroceryItemUpdateOne) sqlSave(ctx context.Context) (gi *GroceryItem,
 				},
 			},
 		}
-		for k, _ := range nodes {
+		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
@@ -619,7 +629,9 @@ func (giuo *GroceryItemUpdateOne) sqlSave(ctx context.Context) (gi *GroceryItem,
 	_spec.Assign = gi.assignValues
 	_spec.ScanValues = gi.scanValues()
 	if err = sqlgraph.UpdateNode(ctx, giuo.driver, _spec); err != nil {
-		if cerr, ok := isSQLConstraintError(err); ok {
+		if _, ok := err.(*sqlgraph.NotFoundError); ok {
+			err = &NotFoundError{groceryitem.Label}
+		} else if cerr, ok := isSQLConstraintError(err); ok {
 			err = cerr
 		}
 		return nil, err

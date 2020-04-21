@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -19,15 +18,9 @@ import (
 // UserIDMappingUpdate is the builder for updating UserIDMapping entities.
 type UserIDMappingUpdate struct {
 	config
-	created_at      *time.Time
-	modified_at     *time.Time
-	deleted_at      *time.Time
-	cleardeleted_at bool
-	platform_type   *useridmapping.PlatformType
-	platform_id     *string
-	user            map[int]struct{}
-	clearedUser     bool
-	predicates      []predicate.UserIDMapping
+	hooks      []Hook
+	mutation   *UserIDMappingMutation
+	predicates []predicate.UserIDMapping
 }
 
 // Where adds a new predicate for the builder.
@@ -38,7 +31,7 @@ func (uimu *UserIDMappingUpdate) Where(ps ...predicate.UserIDMapping) *UserIDMap
 
 // SetCreatedAt sets the created_at field.
 func (uimu *UserIDMappingUpdate) SetCreatedAt(t time.Time) *UserIDMappingUpdate {
-	uimu.created_at = &t
+	uimu.mutation.SetCreatedAt(t)
 	return uimu
 }
 
@@ -52,7 +45,7 @@ func (uimu *UserIDMappingUpdate) SetNillableCreatedAt(t *time.Time) *UserIDMappi
 
 // SetModifiedAt sets the modified_at field.
 func (uimu *UserIDMappingUpdate) SetModifiedAt(t time.Time) *UserIDMappingUpdate {
-	uimu.modified_at = &t
+	uimu.mutation.SetModifiedAt(t)
 	return uimu
 }
 
@@ -66,7 +59,7 @@ func (uimu *UserIDMappingUpdate) SetNillableModifiedAt(t *time.Time) *UserIDMapp
 
 // SetDeletedAt sets the deleted_at field.
 func (uimu *UserIDMappingUpdate) SetDeletedAt(t time.Time) *UserIDMappingUpdate {
-	uimu.deleted_at = &t
+	uimu.mutation.SetDeletedAt(t)
 	return uimu
 }
 
@@ -80,29 +73,25 @@ func (uimu *UserIDMappingUpdate) SetNillableDeletedAt(t *time.Time) *UserIDMappi
 
 // ClearDeletedAt clears the value of deleted_at.
 func (uimu *UserIDMappingUpdate) ClearDeletedAt() *UserIDMappingUpdate {
-	uimu.deleted_at = nil
-	uimu.cleardeleted_at = true
+	uimu.mutation.ClearDeletedAt()
 	return uimu
 }
 
 // SetPlatformType sets the platform_type field.
 func (uimu *UserIDMappingUpdate) SetPlatformType(ut useridmapping.PlatformType) *UserIDMappingUpdate {
-	uimu.platform_type = &ut
+	uimu.mutation.SetPlatformType(ut)
 	return uimu
 }
 
 // SetPlatformID sets the platform_id field.
 func (uimu *UserIDMappingUpdate) SetPlatformID(s string) *UserIDMappingUpdate {
-	uimu.platform_id = &s
+	uimu.mutation.SetPlatformID(s)
 	return uimu
 }
 
 // SetUserID sets the user edge to User by id.
 func (uimu *UserIDMappingUpdate) SetUserID(id int) *UserIDMappingUpdate {
-	if uimu.user == nil {
-		uimu.user = make(map[int]struct{})
-	}
-	uimu.user[id] = struct{}{}
+	uimu.mutation.SetUserID(id)
 	return uimu
 }
 
@@ -121,21 +110,42 @@ func (uimu *UserIDMappingUpdate) SetUser(u *User) *UserIDMappingUpdate {
 
 // ClearUser clears the user edge to User.
 func (uimu *UserIDMappingUpdate) ClearUser() *UserIDMappingUpdate {
-	uimu.clearedUser = true
+	uimu.mutation.ClearUser()
 	return uimu
 }
 
 // Save executes the query and returns the number of rows/vertices matched by this operation.
 func (uimu *UserIDMappingUpdate) Save(ctx context.Context) (int, error) {
-	if uimu.platform_type != nil {
-		if err := useridmapping.PlatformTypeValidator(*uimu.platform_type); err != nil {
+	if v, ok := uimu.mutation.PlatformType(); ok {
+		if err := useridmapping.PlatformTypeValidator(v); err != nil {
 			return 0, fmt.Errorf("ent: validator failed for field \"platform_type\": %v", err)
 		}
 	}
-	if len(uimu.user) > 1 {
-		return 0, errors.New("ent: multiple assignments on a unique edge \"user\"")
+
+	var (
+		err      error
+		affected int
+	)
+	if len(uimu.hooks) == 0 {
+		affected, err = uimu.sqlSave(ctx)
+	} else {
+		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
+			mutation, ok := m.(*UserIDMappingMutation)
+			if !ok {
+				return nil, fmt.Errorf("unexpected mutation type %T", m)
+			}
+			uimu.mutation = mutation
+			affected, err = uimu.sqlSave(ctx)
+			return affected, err
+		})
+		for i := len(uimu.hooks) - 1; i >= 0; i-- {
+			mut = uimu.hooks[i](mut)
+		}
+		if _, err := mut.Mutate(ctx, uimu.mutation); err != nil {
+			return 0, err
+		}
 	}
-	return uimu.sqlSave(ctx)
+	return affected, err
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -178,48 +188,48 @@ func (uimu *UserIDMappingUpdate) sqlSave(ctx context.Context) (n int, err error)
 			}
 		}
 	}
-	if value := uimu.created_at; value != nil {
+	if value, ok := uimu.mutation.CreatedAt(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
-			Value:  *value,
+			Value:  value,
 			Column: useridmapping.FieldCreatedAt,
 		})
 	}
-	if value := uimu.modified_at; value != nil {
+	if value, ok := uimu.mutation.ModifiedAt(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
-			Value:  *value,
+			Value:  value,
 			Column: useridmapping.FieldModifiedAt,
 		})
 	}
-	if value := uimu.deleted_at; value != nil {
+	if value, ok := uimu.mutation.DeletedAt(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
-			Value:  *value,
+			Value:  value,
 			Column: useridmapping.FieldDeletedAt,
 		})
 	}
-	if uimu.cleardeleted_at {
+	if uimu.mutation.DeletedAtCleared() {
 		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
 			Column: useridmapping.FieldDeletedAt,
 		})
 	}
-	if value := uimu.platform_type; value != nil {
+	if value, ok := uimu.mutation.PlatformType(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeEnum,
-			Value:  *value,
+			Value:  value,
 			Column: useridmapping.FieldPlatformType,
 		})
 	}
-	if value := uimu.platform_id; value != nil {
+	if value, ok := uimu.mutation.PlatformID(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeString,
-			Value:  *value,
+			Value:  value,
 			Column: useridmapping.FieldPlatformID,
 		})
 	}
-	if uimu.clearedUser {
+	if uimu.mutation.UserCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
@@ -235,7 +245,7 @@ func (uimu *UserIDMappingUpdate) sqlSave(ctx context.Context) (n int, err error)
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := uimu.user; len(nodes) > 0 {
+	if nodes := uimu.mutation.UserIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
@@ -249,13 +259,15 @@ func (uimu *UserIDMappingUpdate) sqlSave(ctx context.Context) (n int, err error)
 				},
 			},
 		}
-		for k, _ := range nodes {
+		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, uimu.driver, _spec); err != nil {
-		if cerr, ok := isSQLConstraintError(err); ok {
+		if _, ok := err.(*sqlgraph.NotFoundError); ok {
+			err = &NotFoundError{useridmapping.Label}
+		} else if cerr, ok := isSQLConstraintError(err); ok {
 			err = cerr
 		}
 		return 0, err
@@ -266,20 +278,13 @@ func (uimu *UserIDMappingUpdate) sqlSave(ctx context.Context) (n int, err error)
 // UserIDMappingUpdateOne is the builder for updating a single UserIDMapping entity.
 type UserIDMappingUpdateOne struct {
 	config
-	id              int
-	created_at      *time.Time
-	modified_at     *time.Time
-	deleted_at      *time.Time
-	cleardeleted_at bool
-	platform_type   *useridmapping.PlatformType
-	platform_id     *string
-	user            map[int]struct{}
-	clearedUser     bool
+	hooks    []Hook
+	mutation *UserIDMappingMutation
 }
 
 // SetCreatedAt sets the created_at field.
 func (uimuo *UserIDMappingUpdateOne) SetCreatedAt(t time.Time) *UserIDMappingUpdateOne {
-	uimuo.created_at = &t
+	uimuo.mutation.SetCreatedAt(t)
 	return uimuo
 }
 
@@ -293,7 +298,7 @@ func (uimuo *UserIDMappingUpdateOne) SetNillableCreatedAt(t *time.Time) *UserIDM
 
 // SetModifiedAt sets the modified_at field.
 func (uimuo *UserIDMappingUpdateOne) SetModifiedAt(t time.Time) *UserIDMappingUpdateOne {
-	uimuo.modified_at = &t
+	uimuo.mutation.SetModifiedAt(t)
 	return uimuo
 }
 
@@ -307,7 +312,7 @@ func (uimuo *UserIDMappingUpdateOne) SetNillableModifiedAt(t *time.Time) *UserID
 
 // SetDeletedAt sets the deleted_at field.
 func (uimuo *UserIDMappingUpdateOne) SetDeletedAt(t time.Time) *UserIDMappingUpdateOne {
-	uimuo.deleted_at = &t
+	uimuo.mutation.SetDeletedAt(t)
 	return uimuo
 }
 
@@ -321,29 +326,25 @@ func (uimuo *UserIDMappingUpdateOne) SetNillableDeletedAt(t *time.Time) *UserIDM
 
 // ClearDeletedAt clears the value of deleted_at.
 func (uimuo *UserIDMappingUpdateOne) ClearDeletedAt() *UserIDMappingUpdateOne {
-	uimuo.deleted_at = nil
-	uimuo.cleardeleted_at = true
+	uimuo.mutation.ClearDeletedAt()
 	return uimuo
 }
 
 // SetPlatformType sets the platform_type field.
 func (uimuo *UserIDMappingUpdateOne) SetPlatformType(ut useridmapping.PlatformType) *UserIDMappingUpdateOne {
-	uimuo.platform_type = &ut
+	uimuo.mutation.SetPlatformType(ut)
 	return uimuo
 }
 
 // SetPlatformID sets the platform_id field.
 func (uimuo *UserIDMappingUpdateOne) SetPlatformID(s string) *UserIDMappingUpdateOne {
-	uimuo.platform_id = &s
+	uimuo.mutation.SetPlatformID(s)
 	return uimuo
 }
 
 // SetUserID sets the user edge to User by id.
 func (uimuo *UserIDMappingUpdateOne) SetUserID(id int) *UserIDMappingUpdateOne {
-	if uimuo.user == nil {
-		uimuo.user = make(map[int]struct{})
-	}
-	uimuo.user[id] = struct{}{}
+	uimuo.mutation.SetUserID(id)
 	return uimuo
 }
 
@@ -362,21 +363,42 @@ func (uimuo *UserIDMappingUpdateOne) SetUser(u *User) *UserIDMappingUpdateOne {
 
 // ClearUser clears the user edge to User.
 func (uimuo *UserIDMappingUpdateOne) ClearUser() *UserIDMappingUpdateOne {
-	uimuo.clearedUser = true
+	uimuo.mutation.ClearUser()
 	return uimuo
 }
 
 // Save executes the query and returns the updated entity.
 func (uimuo *UserIDMappingUpdateOne) Save(ctx context.Context) (*UserIDMapping, error) {
-	if uimuo.platform_type != nil {
-		if err := useridmapping.PlatformTypeValidator(*uimuo.platform_type); err != nil {
+	if v, ok := uimuo.mutation.PlatformType(); ok {
+		if err := useridmapping.PlatformTypeValidator(v); err != nil {
 			return nil, fmt.Errorf("ent: validator failed for field \"platform_type\": %v", err)
 		}
 	}
-	if len(uimuo.user) > 1 {
-		return nil, errors.New("ent: multiple assignments on a unique edge \"user\"")
+
+	var (
+		err  error
+		node *UserIDMapping
+	)
+	if len(uimuo.hooks) == 0 {
+		node, err = uimuo.sqlSave(ctx)
+	} else {
+		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
+			mutation, ok := m.(*UserIDMappingMutation)
+			if !ok {
+				return nil, fmt.Errorf("unexpected mutation type %T", m)
+			}
+			uimuo.mutation = mutation
+			node, err = uimuo.sqlSave(ctx)
+			return node, err
+		})
+		for i := len(uimuo.hooks) - 1; i >= 0; i-- {
+			mut = uimuo.hooks[i](mut)
+		}
+		if _, err := mut.Mutate(ctx, uimuo.mutation); err != nil {
+			return nil, err
+		}
 	}
-	return uimuo.sqlSave(ctx)
+	return node, err
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -407,54 +429,58 @@ func (uimuo *UserIDMappingUpdateOne) sqlSave(ctx context.Context) (uim *UserIDMa
 			Table:   useridmapping.Table,
 			Columns: useridmapping.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Value:  uimuo.id,
 				Type:   field.TypeInt,
 				Column: useridmapping.FieldID,
 			},
 		},
 	}
-	if value := uimuo.created_at; value != nil {
+	id, ok := uimuo.mutation.ID()
+	if !ok {
+		return nil, fmt.Errorf("missing UserIDMapping.ID for update")
+	}
+	_spec.Node.ID.Value = id
+	if value, ok := uimuo.mutation.CreatedAt(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
-			Value:  *value,
+			Value:  value,
 			Column: useridmapping.FieldCreatedAt,
 		})
 	}
-	if value := uimuo.modified_at; value != nil {
+	if value, ok := uimuo.mutation.ModifiedAt(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
-			Value:  *value,
+			Value:  value,
 			Column: useridmapping.FieldModifiedAt,
 		})
 	}
-	if value := uimuo.deleted_at; value != nil {
+	if value, ok := uimuo.mutation.DeletedAt(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
-			Value:  *value,
+			Value:  value,
 			Column: useridmapping.FieldDeletedAt,
 		})
 	}
-	if uimuo.cleardeleted_at {
+	if uimuo.mutation.DeletedAtCleared() {
 		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
 			Column: useridmapping.FieldDeletedAt,
 		})
 	}
-	if value := uimuo.platform_type; value != nil {
+	if value, ok := uimuo.mutation.PlatformType(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeEnum,
-			Value:  *value,
+			Value:  value,
 			Column: useridmapping.FieldPlatformType,
 		})
 	}
-	if value := uimuo.platform_id; value != nil {
+	if value, ok := uimuo.mutation.PlatformID(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeString,
-			Value:  *value,
+			Value:  value,
 			Column: useridmapping.FieldPlatformID,
 		})
 	}
-	if uimuo.clearedUser {
+	if uimuo.mutation.UserCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
@@ -470,7 +496,7 @@ func (uimuo *UserIDMappingUpdateOne) sqlSave(ctx context.Context) (uim *UserIDMa
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := uimuo.user; len(nodes) > 0 {
+	if nodes := uimuo.mutation.UserIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
@@ -484,7 +510,7 @@ func (uimuo *UserIDMappingUpdateOne) sqlSave(ctx context.Context) (uim *UserIDMa
 				},
 			},
 		}
-		for k, _ := range nodes {
+		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
@@ -493,7 +519,9 @@ func (uimuo *UserIDMappingUpdateOne) sqlSave(ctx context.Context) (uim *UserIDMa
 	_spec.Assign = uim.assignValues
 	_spec.ScanValues = uim.scanValues()
 	if err = sqlgraph.UpdateNode(ctx, uimuo.driver, _spec); err != nil {
-		if cerr, ok := isSQLConstraintError(err); ok {
+		if _, ok := err.(*sqlgraph.NotFoundError); ok {
+			err = &NotFoundError{useridmapping.Label}
+		} else if cerr, ok := isSQLConstraintError(err); ok {
 			err = cerr
 		}
 		return nil, err
