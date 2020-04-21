@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+#
+# Wrap entc
+
+go run "$(go list -m -f '{{.Dir}}' github.com/facebookincubator/ent)/cmd/entc" $@
