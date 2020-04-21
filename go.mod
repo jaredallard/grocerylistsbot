@@ -9,6 +9,6 @@ require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/sirupsen/logrus v1.5.0
 	github.com/technoweenie/multipartstreamer v1.0.1 // indirect
-	golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7
+	golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543
 	google.golang.org/appengine v1.4.0
 )
