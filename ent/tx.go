@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"sync"
 
 	"github.com/facebookincubator/ent/dialect"
 )
@@ -20,60 +19,23 @@ type Tx struct {
 	User *UserClient
 	// UserIDMapping is the client for interacting with the UserIDMapping builders.
 	UserIDMapping *UserIDMappingClient
-
-	// lazily loaded.
-	client     *Client
-	clientOnce sync.Once
-
-	// completion callbacks.
-	mu         sync.Mutex
-	onCommit   []func(error)
-	onRollback []func(error)
 }
 
 // Commit commits the transaction.
 func (tx *Tx) Commit() error {
-	err := tx.config.driver.(*txDriver).tx.Commit()
-	tx.mu.Lock()
-	defer tx.mu.Unlock()
-	for _, f := range tx.onCommit {
-		f(err)
-	}
-	return err
-}
-
-// OnCommit adds a function to call on commit.
-func (tx *Tx) OnCommit(f func(error)) {
-	tx.mu.Lock()
-	defer tx.mu.Unlock()
-	tx.onCommit = append(tx.onCommit, f)
+	return tx.config.driver.(*txDriver).tx.Commit()
 }
 
 // Rollback rollbacks the transaction.
 func (tx *Tx) Rollback() error {
-	err := tx.config.driver.(*txDriver).tx.Rollback()
-	tx.mu.Lock()
-	defer tx.mu.Unlock()
-	for _, f := range tx.onRollback {
-		f(err)
-	}
-	return err
-}
-
-// OnRollback adds a function to call on rollback.
-func (tx *Tx) OnRollback(f func(error)) {
-	tx.mu.Lock()
-	defer tx.mu.Unlock()
-	tx.onRollback = append(tx.onRollback, f)
+	return tx.config.driver.(*txDriver).tx.Rollback()
 }
 
 // Client returns a Client that binds to current transaction.
 func (tx *Tx) Client() *Client {
-	tx.clientOnce.Do(func() {
-		tx.client = &Client{config: tx.config}
-		tx.client.init()
-	})
-	return tx.client
+	client := &Client{config: tx.config}
+	client.init()
+	return client
 }
 
 func (tx *Tx) init() {

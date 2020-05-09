@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -53,7 +54,11 @@ func notifyUsers(ctx context.Context, c *api.Client, p *telegram.Provider, msg *
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	client, err := ent.Open("postgres", "sslmode=disable user=postgres dbname=ent")
+	connstr := fmt.Sprintf(
+		"user=%s host=%s sslmode=%s password='%s' dbname=ent",
+		os.Getenv("DB_USER"), os.Getenv("DB_HOST"), "disable", strings.ReplaceAll(os.Getenv("DB_PASS"), "'", `\'`),
+	)
+	client, err := ent.Open("postgres", connstr)
 	if err != nil {
 		log.Fatalf("failed opening connection to postgres: %v", err)
 	}
@@ -92,13 +97,13 @@ func main() {
 			})
 			if err != nil {
 				log.Errorf("failed to create a user: %v", err)
-				if err := msg.Reply("I failed to create you account\\.\\.\\. Please try later!"); err != nil {
+				if err := msg.Reply("I failed to create you account\\.\\.\\. Please try later\\!"); err != nil {
 					log.Errorf("failed to send user a reply: %v", err)
 					continue
 				}
 			}
 
-			if err := msg.Reply("Hi! I've created you an account"); err != nil {
+			if err := msg.Reply("Hi\\! I've created you an account"); err != nil {
 				log.Errorf("failed to send user a reply: %v", err)
 				continue
 			}
@@ -434,13 +439,33 @@ func main() {
 
 			err = c.DeleteGroceryItem(ctx, l, &ent.GroceryItem{ID: id})
 			if err != nil {
-				log.Errorf("failed to mark item as purchased %d: %v", id, err)
+				log.Errorf("failed to remove item %d: %v", id, err)
 				if err := msg.Reply("I'm sorry, an error occurred! Please try again later\\."); err != nil {
 					log.Errorf("failed to send user a reply: %v", err)
 				}
 				continue
 			}
 			if err := msg.Reply("Removed Item"); err != nil {
+				log.Errorf("failed to send user a reply: %v", err)
+			}
+		} else if cmd == "/removeall" {
+			l := msg.From.Edges.ActiveList
+			if l == nil {
+				if err := msg.Reply("Please switch to a list first, you can view your lists /lists and then /switch ID"); err != nil {
+					log.Errorf("failed to send user a reply: %v", err)
+				}
+				continue
+			}
+
+			err = c.DeleteAllGroceryItems(ctx, l)
+			if err != nil {
+				log.Errorf("failed to remove all items: %v", err)
+				if err := msg.Reply("I'm sorry, an error occurred! Please try again later\\."); err != nil {
+					log.Errorf("failed to send user a reply: %v", err)
+				}
+				continue
+			}
+			if err := msg.Reply("Removed all items from the list"); err != nil {
 				log.Errorf("failed to send user a reply: %v", err)
 			}
 		} else if strings.Contains(cmd, "/") {

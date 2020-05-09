@@ -27,9 +27,8 @@ type UserIDMappingQuery struct {
 	// eager-loading edges.
 	withUser *UserQuery
 	withFKs  bool
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	// intermediate query.
+	sql *sql.Selector
 }
 
 // Where adds a new predicate for the builder.
@@ -59,18 +58,12 @@ func (uimq *UserIDMappingQuery) Order(o ...Order) *UserIDMappingQuery {
 // QueryUser chains the current query on the user edge.
 func (uimq *UserIDMappingQuery) QueryUser() *UserQuery {
 	query := &UserQuery{config: uimq.config}
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := uimq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(useridmapping.Table, useridmapping.FieldID, uimq.sqlQuery()),
-			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, useridmapping.UserTable, useridmapping.UserColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(uimq.driver.Dialect(), step)
-		return fromU, nil
-	}
+	step := sqlgraph.NewStep(
+		sqlgraph.From(useridmapping.Table, useridmapping.FieldID, uimq.sqlQuery()),
+		sqlgraph.To(user.Table, user.FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, useridmapping.UserTable, useridmapping.UserColumn),
+	)
+	query.sql = sqlgraph.SetNeighbors(uimq.driver.Dialect(), step)
 	return query
 }
 
@@ -170,9 +163,6 @@ func (uimq *UserIDMappingQuery) OnlyXID(ctx context.Context) int {
 
 // All executes the query and returns a list of UserIDMappings.
 func (uimq *UserIDMappingQuery) All(ctx context.Context) ([]*UserIDMapping, error) {
-	if err := uimq.prepareQuery(ctx); err != nil {
-		return nil, err
-	}
 	return uimq.sqlAll(ctx)
 }
 
@@ -205,9 +195,6 @@ func (uimq *UserIDMappingQuery) IDsX(ctx context.Context) []int {
 
 // Count returns the count of the given query.
 func (uimq *UserIDMappingQuery) Count(ctx context.Context) (int, error) {
-	if err := uimq.prepareQuery(ctx); err != nil {
-		return 0, err
-	}
 	return uimq.sqlCount(ctx)
 }
 
@@ -222,9 +209,6 @@ func (uimq *UserIDMappingQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (uimq *UserIDMappingQuery) Exist(ctx context.Context) (bool, error) {
-	if err := uimq.prepareQuery(ctx); err != nil {
-		return false, err
-	}
 	return uimq.sqlExist(ctx)
 }
 
@@ -248,8 +232,7 @@ func (uimq *UserIDMappingQuery) Clone() *UserIDMappingQuery {
 		unique:     append([]string{}, uimq.unique...),
 		predicates: append([]predicate.UserIDMapping{}, uimq.predicates...),
 		// clone intermediate query.
-		sql:  uimq.sql.Clone(),
-		path: uimq.path,
+		sql: uimq.sql.Clone(),
 	}
 }
 
@@ -282,12 +265,7 @@ func (uimq *UserIDMappingQuery) WithUser(opts ...func(*UserQuery)) *UserIDMappin
 func (uimq *UserIDMappingQuery) GroupBy(field string, fields ...string) *UserIDMappingGroupBy {
 	group := &UserIDMappingGroupBy{config: uimq.config}
 	group.fields = append([]string{field}, fields...)
-	group.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := uimq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return uimq.sqlQuery(), nil
-	}
+	group.sql = uimq.sqlQuery()
 	return group
 }
 
@@ -306,24 +284,8 @@ func (uimq *UserIDMappingQuery) GroupBy(field string, fields ...string) *UserIDM
 func (uimq *UserIDMappingQuery) Select(field string, fields ...string) *UserIDMappingSelect {
 	selector := &UserIDMappingSelect{config: uimq.config}
 	selector.fields = append([]string{field}, fields...)
-	selector.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := uimq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return uimq.sqlQuery(), nil
-	}
+	selector.sql = uimq.sqlQuery()
 	return selector
-}
-
-func (uimq *UserIDMappingQuery) prepareQuery(ctx context.Context) error {
-	if uimq.path != nil {
-		prev, err := uimq.path(ctx)
-		if err != nil {
-			return err
-		}
-		uimq.sql = prev
-	}
-	return nil
 }
 
 func (uimq *UserIDMappingQuery) sqlAll(ctx context.Context) ([]*UserIDMapping, error) {
@@ -472,9 +434,8 @@ type UserIDMappingGroupBy struct {
 	config
 	fields []string
 	fns    []Aggregate
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	// intermediate query.
+	sql *sql.Selector
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -485,11 +446,6 @@ func (uimgb *UserIDMappingGroupBy) Aggregate(fns ...Aggregate) *UserIDMappingGro
 
 // Scan applies the group-by query and scan the result into the given value.
 func (uimgb *UserIDMappingGroupBy) Scan(ctx context.Context, v interface{}) error {
-	query, err := uimgb.path(ctx)
-	if err != nil {
-		return err
-	}
-	uimgb.sql = query
 	return uimgb.sqlScan(ctx, v)
 }
 
@@ -608,18 +564,12 @@ func (uimgb *UserIDMappingGroupBy) sqlQuery() *sql.Selector {
 type UserIDMappingSelect struct {
 	config
 	fields []string
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	// intermediate queries.
+	sql *sql.Selector
 }
 
 // Scan applies the selector query and scan the result into the given value.
 func (uims *UserIDMappingSelect) Scan(ctx context.Context, v interface{}) error {
-	query, err := uims.path(ctx)
-	if err != nil {
-		return err
-	}
-	uims.sql = query
 	return uims.sqlScan(ctx, v)
 }
 

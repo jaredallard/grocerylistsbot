@@ -1,0 +1,41 @@
+# Create Secret with
+# kubectl create secret --namespace personal-projects generic config --from-literal=TELEGRAM_TOKEN=$TELEGRAM_TOKEN
+#
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: personal-projects
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grocerylistsbot
+  namespace: personal-projects
+  labels:
+    app: grocerylistsbot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grocerylistsbot
+  template:
+    metadata:
+      labels:
+        app: grocerylistsbot
+    spec:
+      containers:
+      - name: grocerylistsbot
+        image: jaredallard/grocerylistsbot
+        imagePullPolicy: Always
+        env:
+        - name: TELEGRAM_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: config
+              key: TELEGRAM_TOKEN
+        - name: DB_HOST
+          value: grocerylistsbot-postgres
+        - name: DB_USER
+          value: "postgres"
+        - name: DB_PASS
+          value: "password"

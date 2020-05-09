@@ -27,9 +27,8 @@ type GroceryListQuery struct {
 	predicates []predicate.GroceryList
 	// eager-loading edges.
 	withMembers *UserQuery
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	// intermediate query.
+	sql *sql.Selector
 }
 
 // Where adds a new predicate for the builder.
@@ -59,18 +58,12 @@ func (glq *GroceryListQuery) Order(o ...Order) *GroceryListQuery {
 // QueryMembers chains the current query on the members edge.
 func (glq *GroceryListQuery) QueryMembers() *UserQuery {
 	query := &UserQuery{config: glq.config}
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := glq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(grocerylist.Table, grocerylist.FieldID, glq.sqlQuery()),
-			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, grocerylist.MembersTable, grocerylist.MembersPrimaryKey...),
-		)
-		fromU = sqlgraph.SetNeighbors(glq.driver.Dialect(), step)
-		return fromU, nil
-	}
+	step := sqlgraph.NewStep(
+		sqlgraph.From(grocerylist.Table, grocerylist.FieldID, glq.sqlQuery()),
+		sqlgraph.To(user.Table, user.FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, true, grocerylist.MembersTable, grocerylist.MembersPrimaryKey...),
+	)
+	query.sql = sqlgraph.SetNeighbors(glq.driver.Dialect(), step)
 	return query
 }
 
@@ -170,9 +163,6 @@ func (glq *GroceryListQuery) OnlyXID(ctx context.Context) int {
 
 // All executes the query and returns a list of GroceryLists.
 func (glq *GroceryListQuery) All(ctx context.Context) ([]*GroceryList, error) {
-	if err := glq.prepareQuery(ctx); err != nil {
-		return nil, err
-	}
 	return glq.sqlAll(ctx)
 }
 
@@ -205,9 +195,6 @@ func (glq *GroceryListQuery) IDsX(ctx context.Context) []int {
 
 // Count returns the count of the given query.
 func (glq *GroceryListQuery) Count(ctx context.Context) (int, error) {
-	if err := glq.prepareQuery(ctx); err != nil {
-		return 0, err
-	}
 	return glq.sqlCount(ctx)
 }
 
@@ -222,9 +209,6 @@ func (glq *GroceryListQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (glq *GroceryListQuery) Exist(ctx context.Context) (bool, error) {
-	if err := glq.prepareQuery(ctx); err != nil {
-		return false, err
-	}
 	return glq.sqlExist(ctx)
 }
 
@@ -248,8 +232,7 @@ func (glq *GroceryListQuery) Clone() *GroceryListQuery {
 		unique:     append([]string{}, glq.unique...),
 		predicates: append([]predicate.GroceryList{}, glq.predicates...),
 		// clone intermediate query.
-		sql:  glq.sql.Clone(),
-		path: glq.path,
+		sql: glq.sql.Clone(),
 	}
 }
 
@@ -282,12 +265,7 @@ func (glq *GroceryListQuery) WithMembers(opts ...func(*UserQuery)) *GroceryListQ
 func (glq *GroceryListQuery) GroupBy(field string, fields ...string) *GroceryListGroupBy {
 	group := &GroceryListGroupBy{config: glq.config}
 	group.fields = append([]string{field}, fields...)
-	group.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := glq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return glq.sqlQuery(), nil
-	}
+	group.sql = glq.sqlQuery()
 	return group
 }
 
@@ -306,24 +284,8 @@ func (glq *GroceryListQuery) GroupBy(field string, fields ...string) *GroceryLis
 func (glq *GroceryListQuery) Select(field string, fields ...string) *GroceryListSelect {
 	selector := &GroceryListSelect{config: glq.config}
 	selector.fields = append([]string{field}, fields...)
-	selector.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := glq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return glq.sqlQuery(), nil
-	}
+	selector.sql = glq.sqlQuery()
 	return selector
-}
-
-func (glq *GroceryListQuery) prepareQuery(ctx context.Context) error {
-	if glq.path != nil {
-		prev, err := glq.path(ctx)
-		if err != nil {
-			return err
-		}
-		glq.sql = prev
-	}
-	return nil
 }
 
 func (glq *GroceryListQuery) sqlAll(ctx context.Context) ([]*GroceryList, error) {
@@ -500,9 +462,8 @@ type GroceryListGroupBy struct {
 	config
 	fields []string
 	fns    []Aggregate
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	// intermediate query.
+	sql *sql.Selector
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -513,11 +474,6 @@ func (glgb *GroceryListGroupBy) Aggregate(fns ...Aggregate) *GroceryListGroupBy 
 
 // Scan applies the group-by query and scan the result into the given value.
 func (glgb *GroceryListGroupBy) Scan(ctx context.Context, v interface{}) error {
-	query, err := glgb.path(ctx)
-	if err != nil {
-		return err
-	}
-	glgb.sql = query
 	return glgb.sqlScan(ctx, v)
 }
 
@@ -636,18 +592,12 @@ func (glgb *GroceryListGroupBy) sqlQuery() *sql.Selector {
 type GroceryListSelect struct {
 	config
 	fields []string
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	// intermediate queries.
+	sql *sql.Selector
 }
 
 // Scan applies the selector query and scan the result into the given value.
 func (gls *GroceryListSelect) Scan(ctx context.Context, v interface{}) error {
-	query, err := gls.path(ctx)
-	if err != nil {
-		return err
-	}
-	gls.sql = query
 	return gls.sqlScan(ctx, v)
 }
 

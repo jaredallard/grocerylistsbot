@@ -86,25 +86,6 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	}, nil
 }
 
-// BeginTx returns a transactional client with options.
-func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) {
-	if _, ok := c.driver.(*txDriver); ok {
-		return nil, fmt.Errorf("ent: cannot start a transaction within a transaction")
-	}
-	tx, err := c.driver.(*sql.Driver).BeginTx(ctx, opts)
-	if err != nil {
-		return nil, fmt.Errorf("ent: starting a transaction: %v", err)
-	}
-	cfg := config{driver: &txDriver{tx: tx, drv: c.driver}, log: c.log, debug: c.debug, hooks: c.hooks}
-	return &Tx{
-		config:        cfg,
-		GroceryItem:   NewGroceryItemClient(cfg),
-		GroceryList:   NewGroceryListClient(cfg),
-		User:          NewUserClient(cfg),
-		UserIDMapping: NewUserIDMappingClient(cfg),
-	}, nil
-}
-
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
 //	client.Debug().
@@ -217,16 +198,14 @@ func (c *GroceryItemClient) GetX(ctx context.Context, id int) *GroceryItem {
 // QueryGrocerylist queries the grocerylist edge of a GroceryItem.
 func (c *GroceryItemClient) QueryGrocerylist(gi *GroceryItem) *GroceryListQuery {
 	query := &GroceryListQuery{config: c.config}
-	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
-		id := gi.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(groceryitem.Table, groceryitem.FieldID, id),
-			sqlgraph.To(grocerylist.Table, grocerylist.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, groceryitem.GrocerylistTable, groceryitem.GrocerylistColumn),
-		)
-		fromV = sqlgraph.Neighbors(gi.driver.Dialect(), step)
-		return fromV, nil
-	}
+	id := gi.ID
+	step := sqlgraph.NewStep(
+		sqlgraph.From(groceryitem.Table, groceryitem.FieldID, id),
+		sqlgraph.To(grocerylist.Table, grocerylist.FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, groceryitem.GrocerylistTable, groceryitem.GrocerylistColumn),
+	)
+	query.sql = sqlgraph.Neighbors(gi.driver.Dialect(), step)
+
 	return query
 }
 
@@ -316,16 +295,14 @@ func (c *GroceryListClient) GetX(ctx context.Context, id int) *GroceryList {
 // QueryMembers queries the members edge of a GroceryList.
 func (c *GroceryListClient) QueryMembers(gl *GroceryList) *UserQuery {
 	query := &UserQuery{config: c.config}
-	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
-		id := gl.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(grocerylist.Table, grocerylist.FieldID, id),
-			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, grocerylist.MembersTable, grocerylist.MembersPrimaryKey...),
-		)
-		fromV = sqlgraph.Neighbors(gl.driver.Dialect(), step)
-		return fromV, nil
-	}
+	id := gl.ID
+	step := sqlgraph.NewStep(
+		sqlgraph.From(grocerylist.Table, grocerylist.FieldID, id),
+		sqlgraph.To(user.Table, user.FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, true, grocerylist.MembersTable, grocerylist.MembersPrimaryKey...),
+	)
+	query.sql = sqlgraph.Neighbors(gl.driver.Dialect(), step)
+
 	return query
 }
 
@@ -415,32 +392,28 @@ func (c *UserClient) GetX(ctx context.Context, id int) *User {
 // QueryGrocerylist queries the grocerylist edge of a User.
 func (c *UserClient) QueryGrocerylist(u *User) *GroceryListQuery {
 	query := &GroceryListQuery{config: c.config}
-	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
-		id := u.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(user.Table, user.FieldID, id),
-			sqlgraph.To(grocerylist.Table, grocerylist.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, user.GrocerylistTable, user.GrocerylistPrimaryKey...),
-		)
-		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
-		return fromV, nil
-	}
+	id := u.ID
+	step := sqlgraph.NewStep(
+		sqlgraph.From(user.Table, user.FieldID, id),
+		sqlgraph.To(grocerylist.Table, grocerylist.FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, false, user.GrocerylistTable, user.GrocerylistPrimaryKey...),
+	)
+	query.sql = sqlgraph.Neighbors(u.driver.Dialect(), step)
+
 	return query
 }
 
 // QueryActiveList queries the active_list edge of a User.
 func (c *UserClient) QueryActiveList(u *User) *GroceryListQuery {
 	query := &GroceryListQuery{config: c.config}
-	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
-		id := u.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(user.Table, user.FieldID, id),
-			sqlgraph.To(grocerylist.Table, grocerylist.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, user.ActiveListTable, user.ActiveListColumn),
-		)
-		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
-		return fromV, nil
-	}
+	id := u.ID
+	step := sqlgraph.NewStep(
+		sqlgraph.From(user.Table, user.FieldID, id),
+		sqlgraph.To(grocerylist.Table, grocerylist.FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, user.ActiveListTable, user.ActiveListColumn),
+	)
+	query.sql = sqlgraph.Neighbors(u.driver.Dialect(), step)
+
 	return query
 }
 
@@ -530,16 +503,14 @@ func (c *UserIDMappingClient) GetX(ctx context.Context, id int) *UserIDMapping {
 // QueryUser queries the user edge of a UserIDMapping.
 func (c *UserIDMappingClient) QueryUser(uim *UserIDMapping) *UserQuery {
 	query := &UserQuery{config: c.config}
-	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
-		id := uim.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(useridmapping.Table, useridmapping.FieldID, id),
-			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, useridmapping.UserTable, useridmapping.UserColumn),
-		)
-		fromV = sqlgraph.Neighbors(uim.driver.Dialect(), step)
-		return fromV, nil
-	}
+	id := uim.ID
+	step := sqlgraph.NewStep(
+		sqlgraph.From(useridmapping.Table, useridmapping.FieldID, id),
+		sqlgraph.To(user.Table, user.FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, useridmapping.UserTable, useridmapping.UserColumn),
+	)
+	query.sql = sqlgraph.Neighbors(uim.driver.Dialect(), step)
+
 	return query
 }
 

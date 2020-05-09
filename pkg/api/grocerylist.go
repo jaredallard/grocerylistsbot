@@ -159,6 +159,14 @@ func (c *Client) DeleteGroceryItem(ctx context.Context, l *ent.GroceryList, i *e
 	return err
 }
 
+// DeleteAllGroceryItems deletes all items in a grocerylist
+func (c *Client) DeleteAllGroceryItems(ctx context.Context, l *ent.GroceryList) error {
+	_, err := c.db.GroceryItem.Delete().Where(
+		groceryitem.HasGrocerylistWith(grocerylist.ID(l.ID)),
+	).Exec(ctx)
+	return err
+}
+
 // FindGroceryList finds a grocery list between a group of people
 func (c *Client) FindGroceryList(ctx context.Context, users []*ent.User) (*ent.GroceryList, error) {
 	return c.db.GroceryList.Query().Where(
