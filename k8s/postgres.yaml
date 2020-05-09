@@ -16,24 +16,31 @@ spec:
         app: postgres
     spec:
       containers:
-        - name: postgres
-          image: postgres:12.2
-          imagePullPolicy: "IfNotPresent"
-          ports:
-            - containerPort: 5432
-          env:
-          - name: POSTGRES_DB
-            value: ent
-          - name: POSTGRES_PASSWORD
-            value: "password"
-          volumeMounts:
-            - mountPath: /var/lib/postgresql/data
-              subPath: postgres
-              name: postgredb
+      - name: postgres
+        image: postgres:12.2
+        imagePullPolicy: "IfNotPresent"
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          value: ent
+        - name: POSTGRES_PASSWORD
+          value: "password"
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          subPath: postgres
+          name: postgredb
+        resources:
+          requests:
+            cpu: 100m
+            memory: 50Mi
+          limits:
+            cpu: 100m
+            memory: 200Mi
       volumes:
-        - name: postgredb
-          persistentVolumeClaim:
-            claimName: grocerylistsbot-postgres
+      - name: postgredb
+        persistentVolumeClaim:
+          claimName: grocerylistsbot-postgres
 ---
 kind: PersistentVolumeClaim
 apiVersion: v1
@@ -59,6 +66,6 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-   - port: 5432
+  - port: 5432
   selector:
    app: postgres
