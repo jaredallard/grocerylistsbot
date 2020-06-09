@@ -27,6 +27,8 @@ github.com/facebookincubator/ent v0.2.0 h1:q1dIbvn+qZPXiw8SWEQZ+VoZqwB02+19DM2v6
 github.com/facebookincubator/ent v0.2.0/go.mod h1:ijSbLsV565oqD7RU0VTOOhYY5SrF8fTAMk9HahWqgWk=
 github.com/facebookincubator/ent v0.2.1 h1:l8Au/k8u2r+qfuk5Cq5MJwq75gv1necDQeHWysZFcO4=
 github.com/facebookincubator/ent v0.2.1/go.mod h1:ijSbLsV565oqD7RU0VTOOhYY5SrF8fTAMk9HahWqgWk=
+github.com/facebookincubator/ent v0.2.3 h1:p943gSMnfEIWvfxALV84LY3QtaMjoo1m0hCXPATbY3k=
+github.com/facebookincubator/ent v0.2.3/go.mod h1:ijSbLsV565oqD7RU0VTOOhYY5SrF8fTAMk9HahWqgWk=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
 github.com/go-bindata/go-bindata v1.0.1-0.20190711162640-ee3c2418e368/go.mod h1:7xCgX1lzlrXPHkfvn3EhumqHkmSlzt8at9q7v0ax19c=
