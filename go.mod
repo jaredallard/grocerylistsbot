@@ -4,7 +4,7 @@ go 1.13
 
 require (
 	github.com/facebookincubator/ent v0.2.1
-	github.com/go-telegram-bot-api/telegram-bot-api v4.6.4+incompatible
+	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.0.1
 	github.com/lib/pq v1.5.2
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/sirupsen/logrus v1.6.0
