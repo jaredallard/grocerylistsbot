@@ -20,7 +20,7 @@ COPY . .
 # Build our application
 RUN go build -o /src/bin/grocerylistsbot ./cmd/...
 
-FROM alpine:3.11
+FROM alpine:3.14
 ENTRYPOINT ["/usr/local/bin/grocerylistsbot"]
 
 # add ca-certs
